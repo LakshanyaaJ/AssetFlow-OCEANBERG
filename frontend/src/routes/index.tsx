@@ -12,6 +12,8 @@ import { TransfersPage } from '../features/transfers/TransfersPage';
 import { BookingsPage } from '../features/bookings/BookingsPage';
 import { MaintenancePage } from '../features/maintenance/MaintenancePage';
 import { AuditPage } from '../features/audits/AuditPage';
+import { ReportsPage } from '../features/reports/ReportsPage';
+import { NotificationsPage } from '../features/notifications/NotificationsPage';
 
 export const router = createBrowserRouter([
   {
@@ -64,6 +66,14 @@ export const router = createBrowserRouter([
           {
             path: 'audit',
             element: <Navigate to="/audits" replace />,
+          },
+          {
+            path: 'reports',
+            element: <ReportsPage />,
+          },
+          {
+            path: 'notifications',
+            element: <NotificationsPage />,
           },
           {
             path: 'departments/:id',

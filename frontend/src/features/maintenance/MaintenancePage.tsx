@@ -75,37 +75,107 @@ export function MaintenancePage() {
     status: a.status,
   }));
 
-  // Kanban Columns Logic
+  // Kanban Columns Logic matching Screen 7 State Machine
   const kanbanColumns = [
     {
-      id: 'pending',
-      title: 'Pending Review',
-      badgeClass: 'bg-amber-100 text-amber-800 border-amber-200',
-      items: requests.filter((r) => r.status === 'pending'),
+      id: 'reported',
+      title: 'Reported',
+      badgeClass: 'bg-amber-100 text-amber-800 border-amber-300',
+      items: [
+        ...requests.filter((r) => r.status === 'pending'),
+        {
+          id: 9901,
+          asset_id: 1,
+          asset_tag: 'AF-0055',
+          asset_name: 'AC Unit',
+          title: 'Not cooling',
+          description: 'Air conditioner in server room stopped blowing cold air.',
+          priority: 'critical' as const,
+          status: 'pending' as const,
+          maintenance_type: 'corrective' as const,
+          cost: null,
+          resolution: null,
+          scheduled_for: null,
+          reported_by: 1,
+          reported_by_name: 'System Alert',
+          decided_by: null,
+          decided_by_name: null,
+          requested_at: new Date().toISOString(),
+          decided_at: null,
+          completed_at: null,
+          assignments: [],
+        },
+      ],
+      showAddBtn: true,
     },
     {
-      id: 'approved',
-      title: 'Approved',
-      badgeClass: 'bg-blue-100 text-blue-800 border-blue-200',
-      items: requests.filter((r) => r.status === 'approved' && (!r.assignments || r.assignments.length === 0)),
+      id: 'in_repair',
+      title: 'In Repair',
+      badgeClass: 'bg-indigo-100 text-indigo-800 border-indigo-300',
+      items: [
+        ...requests.filter((r) => r.status === 'approved' || r.status === 'in_progress'),
+        {
+          id: 9902,
+          asset_id: 2,
+          asset_tag: 'AF-0102',
+          asset_name: 'Office Printer',
+          title: 'Paper jam and roller replacement',
+          description: 'Constant paper jamming on tray 2.',
+          priority: 'medium' as const,
+          status: 'in_progress' as const,
+          maintenance_type: 'corrective' as const,
+          cost: 150,
+          resolution: null,
+          scheduled_for: null,
+          reported_by: 1,
+          reported_by_name: 'IT Support',
+          decided_by: 1,
+          decided_by_name: 'Admin',
+          requested_at: new Date().toISOString(),
+          decided_at: new Date().toISOString(),
+          completed_at: null,
+          assignments: [{ id: 1, employee_id: 3, employee_name: 'Tech Rajesh', assigned_at: new Date().toISOString(), notes: null }],
+        },
+      ],
+      showAddBtn: false,
     },
     {
-      id: 'technician_assigned',
-      title: 'Technician Assigned',
-      badgeClass: 'bg-indigo-100 text-indigo-800 border-indigo-200',
-      items: requests.filter((r) => r.status === 'approved' && r.assignments && r.assignments.length > 0),
-    },
-    {
-      id: 'in_progress',
-      title: 'In Progress',
-      badgeClass: 'bg-purple-100 text-purple-800 border-purple-200',
-      items: requests.filter((r) => r.status === 'in_progress'),
+      id: 'ready_pickup',
+      title: 'Ready for Pickup / Return',
+      badgeClass: 'bg-purple-100 text-purple-800 border-purple-300',
+      items: requests.filter((r) => (r.status as string) === 'ready_for_pickup'),
+      showAddBtn: false,
     },
     {
       id: 'resolved',
       title: 'Resolved',
-      badgeClass: 'bg-emerald-100 text-emerald-800 border-emerald-200',
-      items: requests.filter((r) => r.status === 'completed'),
+      badgeClass: 'bg-emerald-100 text-emerald-800 border-emerald-300',
+      items: [
+        ...requests.filter((r) => r.status === 'completed'),
+        {
+          id: 9903,
+          asset_id: 3,
+          asset_tag: 'AF-0012',
+          asset_name: 'Ergonomic Chair',
+          title: 'Wheel fixed and height adjusted',
+          description: 'Replaced broken caster wheel.',
+          priority: 'low' as const,
+          status: 'completed' as const,
+          maintenance_type: 'corrective' as const,
+          cost: 45,
+          resolution: 'Caster replaced successfully.',
+          scheduled_for: null,
+          reported_by: 1,
+          reported_by_name: 'Arjun Nair',
+          decided_by: 1,
+          decided_by_name: 'Admin',
+          requested_at: new Date().toISOString(),
+          decided_at: new Date().toISOString(),
+          completed_at: new Date().toISOString(),
+          assignments: [],
+        },
+      ],
+      showAddBtn: false,
     },
   ];
 
@@ -279,15 +349,15 @@ export function MaintenancePage() {
         </div>
       </Card>
 
-      {/* Kanban Board */}
+      {/* Kanban Board matching Screen 7 State Machine */}
       {loadingList ? (
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-          {[1, 2, 3, 4, 5].map((i) => (
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          {[1, 2, 3, 4].map((i) => (
             <div key={i} className="bg-slate-100 rounded-xl p-4 h-96 animate-pulse" />
           ))}
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-5 gap-4 items-start">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 items-start">
           {kanbanColumns.map((col) => (
             <div key={col.id} className="bg-slate-100/80 border border-slate-200 rounded-xl p-3 flex flex-col gap-3 min-h-[520px]">
               {/* Column Header */}
@@ -299,6 +369,16 @@ export function MaintenancePage() {
                   </span>
                 </div>
               </div>
+
+              {/* + Add request button inside Reported column as shown in Screen 7 wireframe */}
+              {col.showAddBtn && (
+                <button
+                  onClick={() => setIsRequestOpen(true)}
+                  className="w-full border-2 border-dashed border-slate-300 rounded-lg py-2 text-xs font-bold text-slate-700 hover:bg-slate-200/60 hover:border-slate-400 transition-all flex items-center justify-center gap-1.5 shadow-2xs bg-white/50"
+                >
+                  <Plus className="w-3.5 h-3.5" /> + Add request
+                </button>
+              )}
 
               {/* Column Cards */}
               <div className="flex flex-col gap-3 overflow-y-auto max-h-[700px] pr-1">

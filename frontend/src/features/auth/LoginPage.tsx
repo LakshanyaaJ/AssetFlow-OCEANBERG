@@ -4,7 +4,6 @@ import { z } from 'zod';
 import { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { Building2 } from 'lucide-react';
 import { api, apiErrorMessage } from '../../lib/api';
 import { useAuth } from './AuthContext';
 import { Input } from '../../components/ui/Input';
@@ -50,26 +49,25 @@ export function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col justify-center py-12 sm:px-6 lg:px-8 bg-gray-50">
+    <div className="min-h-screen flex flex-col justify-center py-12 sm:px-6 lg:px-8 bg-slate-50">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="flex justify-center text-indigo-600">
-          <Building2 className="w-12 h-12" />
-        </div>
-        <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900 tracking-tight">
-          Sign in to AssetFlow
-        </h2>
-        <p className="mt-2 text-center text-sm text-gray-600">
-          Enterprise Asset & Resource Management
-        </p>
-      </div>
+        <Card className="border-2 border-slate-800 rounded-2xl shadow-md overflow-hidden bg-white">
+          <div className="border-b-2 border-slate-800 py-3 bg-slate-100 text-center font-bold text-lg text-slate-800 tracking-wide">
+            AssetFlow - login
+          </div>
+          <CardContent className="py-8 px-6 sm:px-10 space-y-6">
+            {/* Circle AF Emblem */}
+            <div className="flex justify-center">
+              <div className="w-16 h-16 rounded-full border-2 border-slate-800 flex items-center justify-center text-xl font-extrabold text-slate-800 tracking-wider bg-white">
+                AF
+              </div>
+            </div>
 
-      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <Card>
-          <CardContent className="py-8 px-4 sm:px-10">
-            <form className="space-y-6" onSubmit={handleSubmit(onSubmit)}>
+            <form className="space-y-4" onSubmit={handleSubmit(onSubmit)}>
               <Input
-                label="Email address"
+                label="Email"
                 type="email"
+                placeholder="name@company.com"
                 autoComplete="email"
                 {...register('email')}
                 error={errors.email?.message}
@@ -78,34 +76,40 @@ export function LoginPage() {
               <Input
                 label="Password"
                 type="password"
+                placeholder="********"
                 autoComplete="current-password"
                 {...register('password')}
                 error={errors.password?.message}
               />
 
-              <div className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <input
-                    id="remember-me"
-                    name="remember-me"
-                    type="checkbox"
-                    className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
-                  />
-                  <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-900">
-                    Remember me
-                  </label>
-                </div>
-                <div className="text-sm">
-                  <a href="#" className="font-medium text-indigo-600 hover:text-indigo-500 transition-colors">
-                    Forgot your password?
-                  </a>
-                </div>
+              <div className="flex justify-end pt-1">
+                <a href="#" className="text-xs font-medium text-slate-600 hover:text-slate-900 underline transition-colors">
+                  Forgot password
+                </a>
               </div>
 
-              <Button type="submit" className="w-full" size="lg" isLoading={isLoading}>
-                Sign in
-              </Button>
+              <div className="pt-2">
+                <Button type="submit" className="w-full bg-slate-900 hover:bg-slate-800 text-white font-semibold py-2.5 rounded-lg shadow-sm" size="lg" isLoading={isLoading}>
+                  Sign in
+                </Button>
+              </div>
             </form>
+
+            {/* New here section from wireframe */}
+            <div className="border-t border-slate-200 pt-5 space-y-3">
+              <span className="block text-sm font-bold text-slate-800">New here?</span>
+              <div className="border-2 border-slate-700 rounded-lg p-3 text-xs sm:text-sm text-slate-800 font-medium bg-slate-50 leading-relaxed">
+                Sign up creates an employee account admin roles assigned later
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full border-2 border-slate-800 text-slate-800 hover:bg-slate-100 font-bold py-2 rounded-lg"
+                onClick={() => toast.success('Sign up flow initiated')}
+              >
+                Create Account
+              </Button>
+            </div>
           </CardContent>
         </Card>
       </div>

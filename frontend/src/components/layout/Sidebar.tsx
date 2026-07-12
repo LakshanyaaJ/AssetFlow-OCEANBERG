@@ -6,17 +6,21 @@ import {
   CalendarCheck, 
   Wrench,
   ShieldCheck,
-  Building2
+  Building2,
+  BarChart3,
+  Bell
 } from 'lucide-react';
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { name: 'Asset Directory', href: '/assets', icon: Box },
-  { name: 'Allocations & Transfers', href: '/transfers', icon: ArrowRightLeft },
+  { name: 'Organization setup', href: '/org', icon: Building2 },
+  { name: 'Assets', href: '/assets', icon: Box },
+  { name: 'Allocation & Transfer', href: '/transfers', icon: ArrowRightLeft },
   { name: 'Resource Booking', href: '/bookings', icon: CalendarCheck },
   { name: 'Maintenance', href: '/maintenance', icon: Wrench },
-  { name: 'Audits', href: '/audits', icon: ShieldCheck },
-  { name: 'Organization', href: '/org', icon: Building2 },
+  { name: 'Audit', href: '/audits', icon: ShieldCheck },
+  { name: 'Reports', href: '/reports', icon: BarChart3 },
+  { name: 'Notifications', href: '/notifications', icon: Bell },
 ];
 
 function classNames(...classes: string[]) {

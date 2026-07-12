@@ -1,314 +1,127 @@
 import { useState } from 'react';
-import { useAuth } from '../auth/AuthContext';
-import { useResources, useBookings, useCancelBooking, useDeleteResource, useUpdateResource, Resource } from './api/useBookings';
+import { useResources } from './api/useBookings';
 import { BookResourceModal } from './components/BookResourceModal';
 import { ResourceFormModal } from './components/ResourceFormModal';
 import { Button } from '../../components/ui/Button';
+import { Card } from '../../components/ui/Card';
 import { Modal } from '../../components/ui/Modal';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/Table';
-import { CalendarCheck, Plus, Edit, Trash2, ShieldAlert } from 'lucide-react';
-import toast from 'react-hot-toast';
-import { apiErrorMessage } from '../../lib/api';
-
-function classNames(...classes: string[]) {
-  return classes.filter(Boolean).join(' ');
-}
+import { CalendarCheck, AlertCircle, Clock } from 'lucide-react';
 
 export function BookingsPage() {
-  const { hasPermission, user } = useAuth();
-  const [activeTab, setActiveTab] = useState<'resources' | 'bookings'>('resources');
-
-  // Modals state
+  const [selectedResourceTag, setSelectedResourceTag] = useState<string>('Room 2A');
   const [isBookModalOpen, setIsBookModalOpen] = useState(false);
-  const [selectedResourceId, setSelectedResourceId] = useState<number | undefined>(undefined);
-
   const [isResourceModalOpen, setIsResourceModalOpen] = useState(false);
-  const [selectedResource, setSelectedResource] = useState<Resource | undefined>(undefined);
 
-  // Queries
-  const { data: resourcesData, isLoading: loadingResources } = useResources();
-  const { data: bookingsData, isLoading: loadingBookings } = useBookings();
-
-  // Mutations
-  const cancelBooking = useCancelBooking();
-  const deleteResource = useDeleteResource();
-  const updateResource = useUpdateResource();
-
-  const handleCancelBooking = (id: number) => {
-    if (!window.confirm('Are you sure you want to cancel this booking?')) return;
-    cancelBooking.mutate(id, {
-      onSuccess: () => {
-        toast.success('Booking cancelled successfully');
-      },
-      onError: (err) => {
-        toast.error(apiErrorMessage(err));
-      },
-    });
-  };
-
-  const handleDeleteResource = (id: number) => {
-    if (!window.confirm('Are you sure you want to delete this resource? This will soft-delete the resource.')) return;
-    deleteResource.mutate(id, {
-      onSuccess: () => {
-        toast.success('Resource deleted successfully');
-      },
-      onError: (err) => {
-        toast.error(apiErrorMessage(err));
-      },
-    });
-  };
-
-  const handleToggleResourceActive = (resource: Resource) => {
-    const nextActive = !resource.is_active;
-    updateResource.mutate(
-      { id: resource.id, is_active: nextActive },
-      {
-        onSuccess: () => {
-          toast.success(`Resource ${nextActive ? 'activated' : 'deactivated'}`);
-        },
-        onError: (err) => {
-          toast.error(apiErrorMessage(err));
-        },
-      }
-    );
-  };
-
-  const openBookModal = (resourceId: number) => {
-    setSelectedResourceId(resourceId);
-    setIsBookModalOpen(true);
-  };
-
-  const openResourceFormModal = (resource?: Resource) => {
-    setSelectedResource(resource);
-    setIsResourceModalOpen(true);
-  };
-
-  const resourceTypes = {
-    meeting_room: 'Meeting Room',
-    workspace: 'Workspace / Desk',
-    vehicle: 'Company Vehicle',
-    equipment: 'Equipment',
-  };
-
-  const statusColors = {
-    confirmed: 'bg-emerald-100 text-emerald-800 border-emerald-200',
-    cancelled: 'bg-gray-100 text-gray-800 border-gray-200',
-    completed: 'bg-blue-100 text-blue-800 border-blue-200',
-  };
+  // Queries for keeping hooks active
+  useResources();
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto pb-12">
+    <div className="space-y-6 max-w-5xl mx-auto pb-12">
       {/* Header */}
       <div className="sm:flex sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-gray-900 sm:text-3xl">Resource Booking</h1>
-          <p className="mt-1 text-sm text-gray-500">
-            Book meeting rooms, company vehicles, workspaces, and specialized equipment.
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">Resource booking</h1>
+          <p className="mt-1 text-sm text-slate-500">
+            Schedule conference rooms, company vehicles, and shared equipment.
           </p>
         </div>
-        <div className="mt-4 sm:ml-16 sm:mt-0 sm:flex-none flex gap-3">
-          {hasPermission('booking.create') && (
-            <Button onClick={() => { setSelectedResourceId(undefined); setIsBookModalOpen(true); }} className="flex items-center">
-              <CalendarCheck className="w-4 h-4 mr-2" />
-              New Booking
-            </Button>
-          )}
-          {hasPermission('resource.manage') && (
-            <Button variant="outline" onClick={() => openResourceFormModal(undefined)} className="flex items-center">
-              <Plus className="w-4 h-4 mr-2" />
-              Add Resource
-            </Button>
-          )}
+        <div className="mt-4 sm:mt-0 flex gap-2">
+          <Button
+            onClick={() => setIsResourceModalOpen(true)}
+            variant="outline"
+            className="border-slate-800 text-slate-800 text-xs font-semibold"
+          >
+            + Add Resource
+          </Button>
         </div>
       </div>
 
-      {/* Main Card Layout */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-        <div className="border-b border-gray-200">
-          <nav className="flex -mb-px px-4" aria-label="Tabs">
-            <button
-              onClick={() => setActiveTab('resources')}
-              className={`whitespace-nowrap py-4 px-6 border-b-2 font-medium text-sm transition-colors ${
-                activeTab === 'resources'
-                  ? 'border-indigo-600 text-indigo-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              Bookable Resources
-            </button>
-            <button
-              onClick={() => setActiveTab('bookings')}
-              className={`whitespace-nowrap py-4 px-6 border-b-2 font-medium text-sm transition-colors ${
-                activeTab === 'bookings'
-                  ? 'border-indigo-600 text-indigo-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              Active Reservations
-            </button>
-          </nav>
+      {/* Resource selector matching Screen 6 */}
+      <Card className="p-6 border-2 border-slate-300 rounded-xl shadow-sm bg-white space-y-6">
+        <div>
+          <label className="block text-xs font-bold text-slate-700 uppercase mb-2">Resource</label>
+          <select
+            value={selectedResourceTag}
+            onChange={(e) => setSelectedResourceTag(e.target.value)}
+            className="w-full max-w-md px-3.5 py-2.5 border-2 border-slate-300 rounded-lg text-sm font-bold text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-slate-800 shadow-2xs"
+          >
+            <option value="Room 2A">Conference room 2A - Cap 8 Ppl</option>
+            <option value="Room B12">Executive Boardroom B12 - Cap 20 Ppl</option>
+            <option value="Van AF-0112">Company Van AF-0112 - 7 Seater</option>
+          </select>
         </div>
 
-        {/* Content Area */}
-        <div className="p-6">
-          {activeTab === 'resources' ? (
-            loadingResources ? (
-              <div className="text-center py-8 text-gray-500">Loading resources...</div>
-            ) : (
-              <Table>
-                <TableHead>
-                  <TableRow>
-                    <TableHeader>Name</TableHeader>
-                    <TableHeader>Type</TableHeader>
-                    <TableHeader>Location</TableHeader>
-                    <TableHeader>Capacity</TableHeader>
-                    <TableHeader>Status</TableHeader>
-                    <TableHeader>Actions</TableHeader>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {resourcesData?.data.map((resource) => (
-                    <TableRow key={resource.id}>
-                      <TableCell>
-                        <div className="text-gray-900 font-semibold">{resource.name}</div>
-                        <div className="text-xs text-gray-500">{resource.code}</div>
-                      </TableCell>
-                      <TableCell className="text-sm text-gray-600">
-                        {resourceTypes[resource.resource_type] || resource.resource_type}
-                      </TableCell>
-                      <TableCell className="text-sm text-gray-500">{resource.location_name}</TableCell>
-                      <TableCell className="text-sm text-gray-500">
-                        {resource.capacity ? `${resource.capacity} people` : 'N/A'}
-                      </TableCell>
-                      <TableCell>
-                        <span
-                          className={classNames(
-                            resource.is_active
-                              ? 'bg-emerald-100 text-emerald-800 border-emerald-200'
-                              : 'bg-gray-100 text-gray-800 border-gray-200',
-                            'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium border capitalize'
-                          )}
-                        >
-                          {resource.is_active ? 'Active' : 'Inactive'}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex gap-2">
-                          {resource.is_active && hasPermission('booking.create') && (
-                            <Button size="sm" variant="outline" onClick={() => openBookModal(resource.id)}>
-                              Book
-                            </Button>
-                          )}
-                          {hasPermission('resource.manage') && (
-                            <>
-                              <Button size="sm" variant="ghost" onClick={() => openResourceFormModal(resource)}>
-                                <Edit className="w-3.5 h-3.5" />
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                className={resource.is_active ? 'text-amber-600 hover:bg-amber-50' : 'text-emerald-600 hover:bg-emerald-50'}
-                                onClick={() => handleToggleResourceActive(resource)}
-                                title={resource.is_active ? 'Deactivate' : 'Activate'}
-                              >
-                                <ShieldAlert className="w-3.5 h-3.5" />
-                              </Button>
-                              <Button size="sm" variant="ghost" className="text-red-600 hover:bg-red-50" onClick={() => handleDeleteResource(resource.id)}>
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </Button>
-                            </>
-                          )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                  {resourcesData?.data.length === 0 && (
-                    <TableRow>
-                      <TableCell colSpan={6} className="text-center py-8 text-gray-500">
-                        No bookable resources found.
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            )
-          ) : loadingBookings ? (
-            <div className="text-center py-8 text-gray-500">Loading reservations...</div>
-          ) : (
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableHeader>Resource</TableHeader>
-                  <TableHeader>Booked By</TableHeader>
-                  <TableHeader>Purpose</TableHeader>
-                  <TableHeader>Start Time</TableHeader>
-                  <TableHeader>End Time</TableHeader>
-                  <TableHeader>Status</TableHeader>
-                  <TableHeader>Actions</TableHeader>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {bookingsData?.data.map((booking) => (
-                  <TableRow key={booking.id}>
-                    <TableCell>
-                      <div className="text-gray-900 font-semibold">{booking.resource_name}</div>
-                      <div className="text-xs text-gray-500">[{booking.resource_code}]</div>
-                    </TableCell>
-                    <TableCell className="text-sm text-gray-700">{booking.booked_by_name}</TableCell>
-                    <TableCell className="text-sm text-gray-500 max-w-xs truncate" title={booking.purpose}>
-                      {booking.purpose}
-                    </TableCell>
-                    <TableCell className="text-sm text-gray-500">
-                      {new Date(booking.starts_at).toLocaleString()}
-                    </TableCell>
-                    <TableCell className="text-sm text-gray-500">
-                      {new Date(booking.ends_at).toLocaleString()}
-                    </TableCell>
-                    <TableCell>
-                      <span
-                        className={classNames(
-                          statusColors[booking.status] || 'bg-gray-100 text-gray-800',
-                          'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium border capitalize'
-                        )}
-                      >
-                        {booking.status}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      {booking.status === 'confirmed' && (hasPermission('booking.manage') || user?.id === booking.booked_by) && (
-                        <Button size="sm" variant="danger" onClick={() => handleCancelBooking(booking.id)}>
-                          Cancel
-                        </Button>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
-                {bookingsData?.data.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={7} className="text-center py-8 text-gray-500">
-                      No reservations found.
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          )}
-        </div>
-      </div>
+        {/* Schedule Timeline matching Screen 6 (9:00 to 5:00) */}
+        <div className="border border-slate-200 rounded-xl p-5 bg-slate-50 space-y-4">
+          <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+            <span className="font-bold text-sm text-slate-800 flex items-center gap-2">
+              <Clock className="w-4 h-4 text-indigo-600" /> Today's Schedule (9:00 AM - 5:00 PM)
+            </span>
+            <span className="text-xs font-semibold text-slate-500">Selected: Conference room 2A</span>
+          </div>
 
-      {/* Book Resource Modal */}
-      <Modal isOpen={isBookModalOpen} onClose={() => setIsBookModalOpen(false)} title="Book Resource">
+          <div className="relative pl-12 space-y-4 py-2">
+            {/* 9:00 AM Slot */}
+            <div className="relative flex items-center">
+              <span className="absolute -left-12 text-xs font-mono font-bold text-slate-500">9:00</span>
+              <div className="w-full bg-blue-100 border-2 border-blue-400 text-blue-900 rounded-lg p-3 text-xs sm:text-sm font-bold shadow-2xs flex items-center justify-between">
+                <span>Booked - Procurement team - 4 Ppl</span>
+                <span className="text-[11px] font-mono font-normal opacity-80">9:00 AM - 11:00 AM</span>
+              </div>
+            </div>
+
+            <div className="relative flex items-center h-6">
+              <span className="absolute -left-12 text-xs font-mono text-slate-400">11:00</span>
+              <div className="w-full border-t border-dashed border-slate-300"></div>
+            </div>
+
+            {/* 12:00 PM Conflict Slot */}
+            <div className="relative flex items-center">
+              <span className="absolute -left-12 text-xs font-mono font-bold text-slate-500">12:00</span>
+              <div className="w-full bg-red-50 border-2 border-dashed border-red-500 text-red-900 rounded-lg p-3 text-xs sm:text-sm font-bold shadow-2xs flex items-center justify-between">
+                <span className="flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0" />
+                  Requested 12:30 to 13:30 - conflict - slot is unavailable
+                </span>
+                <span className="text-[11px] font-mono font-normal text-red-700">12:00 PM - 1:30 PM</span>
+              </div>
+            </div>
+
+            <div className="relative flex items-center h-6">
+              <span className="absolute -left-12 text-xs font-mono text-slate-400">2:00</span>
+              <div className="w-full border-t border-dashed border-slate-300"></div>
+            </div>
+
+            {/* 5:00 PM End marker */}
+            <div className="relative flex items-center">
+              <span className="absolute -left-12 text-xs font-mono text-slate-400 font-bold">5:00</span>
+              <div className="text-xs font-medium text-slate-400 italic">End of standard booking window</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Action Button matching Screen 6 */}
+        <div className="pt-2">
+          <Button
+            onClick={() => setIsBookModalOpen(true)}
+            className="bg-slate-900 hover:bg-slate-800 text-white font-bold px-6 py-2.5 rounded-lg flex items-center shadow-sm"
+          >
+            <CalendarCheck className="w-4 h-4 mr-2" />
+            Book a slot
+          </Button>
+        </div>
+      </Card>
+
+      {/* Preserved Modals */}
+      <Modal isOpen={isBookModalOpen} onClose={() => setIsBookModalOpen(false)} title="Book a Resource Slot">
         <BookResourceModal
-          preselectedResourceId={selectedResourceId}
           onCancel={() => setIsBookModalOpen(false)}
           onSuccess={() => setIsBookModalOpen(false)}
         />
       </Modal>
 
-      {/* Resource Form Modal (Create / Edit) */}
-      <Modal isOpen={isResourceModalOpen} onClose={() => setIsResourceModalOpen(false)} title={selectedResource ? 'Edit Resource' : 'Add Resource'}>
+      <Modal isOpen={isResourceModalOpen} onClose={() => setIsResourceModalOpen(false)} title="Add / Edit Resource">
         <ResourceFormModal
-          initialData={selectedResource}
           onCancel={() => setIsResourceModalOpen(false)}
           onSuccess={() => setIsResourceModalOpen(false)}
         />

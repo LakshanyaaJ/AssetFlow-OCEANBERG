@@ -6,8 +6,8 @@ import { Button } from '../../../components/ui/Button';
 
 // Badge Component for Status
 const Badge = ({ status }: { status: string }) => {
-  const bg = status === 'Active' ? 'bg-emerald-100 text-emerald-800' : 'bg-gray-100 text-gray-800';
-  return <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${bg}`}>{status}</span>;
+  const bg = status === 'Active' ? 'bg-emerald-50 text-emerald-800 border border-emerald-500' : 'bg-slate-100 text-slate-800 border border-slate-400';
+  return <span className={`inline-flex items-center px-3 py-0.5 rounded-full text-xs font-bold shadow-2xs ${bg}`}>{status}</span>;
 };
 
 export function DepartmentsTab() {

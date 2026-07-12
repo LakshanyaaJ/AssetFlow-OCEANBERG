@@ -1,7 +1,7 @@
 import { MaintenanceRequest } from '../api/useMaintenance';
 import { Card } from '../../../components/ui/Card';
 import { Button } from '../../../components/ui/Button';
-import { Wrench, Calendar, User, ArrowRight, Play, CheckCircle2 } from 'lucide-react';
+import { Wrench, Calendar, User, ArrowRight, Play } from 'lucide-react';
 
 interface MaintenanceKanbanCardProps {
   request: MaintenanceRequest;
@@ -122,7 +122,7 @@ export function MaintenanceKanbanCard({
             onClick={() => onResolve(request)}
             className="text-xs py-1 px-2.5 bg-emerald-600 hover:bg-emerald-700 flex items-center gap-1 shadow-xs"
           >
-            Resolve <CheckCircle2 className="w-3.5 h-3.5" />
+            Resolve &rarr;
           </Button>
         )}
       </div>
