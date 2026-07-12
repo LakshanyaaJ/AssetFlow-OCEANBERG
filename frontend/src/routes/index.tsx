@@ -8,6 +8,8 @@ import { DepartmentDetailsPage } from '../features/departments/DepartmentDetails
 import { LocationDetailsPage } from '../features/locations/LocationDetailsPage';
 import { Dashboard } from '../features/dashboard/Dashboard';
 import { OrganizationPage } from '../features/organization/OrganizationPage';
+import { TransfersPage } from '../features/transfers/TransfersPage';
+import { BookingsPage } from '../features/bookings/BookingsPage';
 
 export const router = createBrowserRouter([
   {
@@ -40,6 +42,14 @@ export const router = createBrowserRouter([
           {
             path: 'org',
             element: <OrganizationPage />,
+          },
+          {
+            path: 'transfers',
+            element: <TransfersPage />,
+          },
+          {
+            path: 'bookings',
+            element: <BookingsPage />,
           },
           {
             path: 'departments/:id',

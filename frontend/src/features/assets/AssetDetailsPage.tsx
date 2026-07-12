@@ -4,7 +4,7 @@ import { useAsset } from './api/useAsset';
 import { 
   ChevronRight, Edit, UserPlus, ArrowRightLeft, Wrench, QrCode, 
   MapPin, Tag, Box, Hash, User, Calendar, Shield, AlertTriangle,
-  FileText, Image as ImageIcon, Download, CheckCircle, Clock, XCircle, File, Building
+  FileText, Image as ImageIcon, Download, Clock, File, Building
 } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';

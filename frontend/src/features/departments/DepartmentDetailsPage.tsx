@@ -3,7 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { useDepartment } from './api/useDepartment';
 import { 
   ChevronRight, Users, Box, CalendarCheck, Wrench, BarChart2, 
-  Building2, UserCheck, AlertTriangle, CheckCircle, FileText, Download
+  Building2, UserCheck, FileText, Download
 } from 'lucide-react';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';

@@ -21,12 +21,14 @@ export const { router: employeesRouter } = makeCrudRouter({
       SELECT t.id, t.employee_code, t.full_name, t.designation, t.phone,
              t.department_id, d.name AS department_name,
              t.location_id, l.name AS location_name,
-             t.user_id, t.joined_on, t.is_active, t.created_at,
+             t.user_id, u.email, r.name AS role_name, t.joined_on, t.is_active, t.created_at,
              (SELECT count(*)::int FROM asset_allocations aa
                WHERE aa.employee_id = t.id AND aa.returned_at IS NULL) AS active_allocations
       FROM employees t
       JOIN departments d ON d.id = t.department_id
-      JOIN locations l ON l.id = t.location_id`,
+      JOIN locations l ON l.id = t.location_id
+      LEFT JOIN users u ON u.id = t.user_id
+      LEFT JOIN roles r ON r.id = u.role_id`,
     insertable: ['employee_code', 'full_name', 'designation', 'phone', 'department_id', 'location_id', 'user_id', 'joined_on'],
     updatable: ['full_name', 'designation', 'phone', 'department_id', 'location_id', 'user_id', 'is_active'],
     searchable: ['t.full_name', 't.employee_code', 't.designation'],

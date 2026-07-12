@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useLocation } from './api/useLocation';
 import { 
-  ChevronRight, MapPin, Box, CalendarCheck, Wrench, BarChart2, 
-  Users, AlertTriangle, CheckCircle, PieChart, Activity, Maximize
+  ChevronRight, MapPin, Box, Wrench, 
+  Users, CheckCircle, PieChart, Activity, Maximize
 } from 'lucide-react';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';

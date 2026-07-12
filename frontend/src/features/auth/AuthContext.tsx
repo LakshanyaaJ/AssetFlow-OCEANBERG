@@ -4,11 +4,9 @@ import { api, setAccessToken, setSessionExpiredHandler } from '../../lib/api';
 export interface User {
   id: number;
   email: string;
-  full_name: string;
-  role: {
-    name: string;
-    permissions: string[];
-  };
+  fullName: string;
+  role: string;
+  permissions: string[];
 }
 
 interface AuthContextType {
@@ -40,7 +38,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const hasPermission = (permission: string) => {
-    return user?.role.permissions.includes(permission) ?? false;
+    return user?.permissions.includes(permission) ?? false;
   };
 
   useEffect(() => {
