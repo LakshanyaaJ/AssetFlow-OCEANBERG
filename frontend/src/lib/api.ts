@@ -43,8 +43,10 @@ async function refreshAccessToken(): Promise<string> {
 
 api.interceptors.response.use(undefined, async (error: AxiosError) => {
   const original = error.config as (AxiosRequestConfig & { _retried?: boolean }) | undefined;
-  const isAuthRoute = original?.url?.startsWith('/auth/');
-  if (error.response?.status === 401 && original && !original._retried && !isAuthRoute) {
+  // Only login/refresh itself must never trigger a refresh-and-retry (that would loop).
+  // Every other route — including /auth/me — needs the retry so a session survives a reload.
+  const isUnretryableAuthRoute = original?.url === '/auth/login' || original?.url === '/auth/refresh';
+  if (error.response?.status === 401 && original && !original._retried && !isUnretryableAuthRoute) {
     original._retried = true;
     try {
       const token = await refreshAccessToken();

@@ -9,7 +9,10 @@ import { query } from '../config/db';
  * Each statement is idempotent, so restarts and overlapping runs are harmless.
  */
 async function detectOverdueAllocations(): Promise<number> {
-  // NOT EXISTS guard prevents duplicate reminders for the same allocation.
+  // NOT EXISTS narrows the candidate set (cheap, avoids reformatting messages for
+  // allocations everyone already knows about); the real duplicate guard is the
+  // partial unique index (uq_overdue_notification) via ON CONFLICT DO NOTHING —
+  // that's what makes this safe when two connections race the same cron tick.
   const rows = await query<{ id: number }>(`
     WITH overdue AS (
       SELECT aa.id, aa.asset_id, aa.due_at, aa.allocated_by, e.user_id AS holder_user_id,
@@ -29,6 +32,7 @@ async function detectOverdueAllocations(): Promise<number> {
              'Asset ' || asset_tag || ' (' || asset_name || ') was due back on ' || to_char(due_at, 'DD Mon YYYY') || '.',
              'overdue', 'allocation', id
       FROM overdue WHERE holder_user_id IS NOT NULL
+      ON CONFLICT (user_id, entity_type, entity_id) WHERE n_type = 'overdue' DO NOTHING
       RETURNING 1
     )
     INSERT INTO notifications (user_id, title, message, n_type, entity_type, entity_id)
@@ -36,6 +40,7 @@ async function detectOverdueAllocations(): Promise<number> {
            'Asset ' || asset_tag || ' has not been returned (due ' || to_char(due_at, 'DD Mon YYYY') || ').',
            'overdue', 'allocation', id
     FROM overdue
+    ON CONFLICT (user_id, entity_type, entity_id) WHERE n_type = 'overdue' DO NOTHING
     RETURNING id`);
   return rows.length;
 }

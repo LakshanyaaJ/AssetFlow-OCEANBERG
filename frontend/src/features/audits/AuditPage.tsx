@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useAuth } from '../auth/AuthContext';
-import { useAuditList, useAuditStats, useAuditDetails } from './api/useAudit';
+import { useAuditList, useAuditStats, useAuditDetails, useAuditDiscrepancies, useCheckAuditItem } from './api/useAudit';
 import { useLocations } from '../organization/api/useOrganization';
+import { useChangeAssetStatus } from '../assets/api/useAsset';
 import { CreateAuditModal } from './components/CreateAuditModal';
 import { AuditDetailsModal } from './components/AuditDetailsModal';
 import { DiscrepancyReportModal } from './components/DiscrepancyReportModal';
@@ -18,9 +19,9 @@ import {
   SlidersHorizontal,
   Eye,
   FileText,
-  QrCode,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { apiErrorMessage } from '../../lib/api';
 
 export function AuditPage() {
   const { hasPermission } = useAuth();
@@ -44,6 +45,11 @@ export function AuditPage() {
   const { data: listRes, isLoading: loadingList, refetch } = useAuditList(queryParams);
   const { data: statsData, isLoading: loadingStats } = useAuditStats();
   const { data: locationsRes = [] } = useLocations();
+  const { data: discrepancies = [] } = useAuditDiscrepancies();
+  const checkItem = useCheckAuditItem();
+  const changeAssetStatus = useChangeAssetStatus();
+  const canExecute = hasPermission('audit.execute') || canManage;
+  const canWriteOff = hasPermission('asset.manage');
 
   // Selected full cycle with items for modals
   const { data: selectedCycleData } = useAuditDetails(selectedCycleId);
@@ -81,14 +87,6 @@ export function AuditPage() {
         <div className="mt-4 sm:ml-16 sm:mt-0 sm:flex-none flex flex-wrap gap-2.5">
           <Button variant="outline" size="sm" onClick={() => refetch()} className="flex items-center gap-1.5 shadow-2xs">
             <RefreshCw className="w-4 h-4" /> Refresh
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => toast.success('QR Scanner & Verification mode activated')}
-            className="flex items-center gap-1.5 border-2 border-slate-800 text-slate-800 font-bold shadow-2xs"
-          >
-            <QrCode className="w-4 h-4" /> Verify Item / Scan QR
           </Button>
           {canManage && (
             <Button
@@ -175,43 +173,71 @@ export function AuditPage() {
         </Card>
       </div>
 
-      {/* Discrepancies & Missing Items Section matching Screen 8 */}
+      {/* Discrepancies & Missing Items Section — real open items from in-progress cycles */}
       <div className="space-y-3">
         <h2 className="text-lg font-bold tracking-tight text-slate-900 flex items-center gap-2">
           <AlertTriangle className="w-5 h-5 text-red-600" />
           Discrepancies & Missing Items (Requires Action)
         </h2>
-        <Card className="p-5 border-2 border-red-200 rounded-xl shadow-xs bg-white divide-y divide-slate-100">
-          <div className="py-3.5 first:pt-0 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div>
-              <span className="font-bold text-slate-900 text-sm">AF-0088 - Conference room Table</span>
-              <span className="block text-xs text-red-700 font-semibold mt-0.5">Missing from Location HQ Floor 2</span>
-            </div>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => toast.success('Flagged AF-0088 for write-off review')}
-              className="border-2 border-red-400 text-red-800 hover:bg-red-50 font-bold self-start sm:self-auto text-xs"
-            >
-              Flag for Write-off
-            </Button>
-          </div>
-
-          <div className="py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div>
-              <span className="font-bold text-slate-900 text-sm">AF-0105 - iPad Pro</span>
-              <span className="block text-xs text-amber-700 font-semibold mt-0.5">Serial mismatch - reported by Aditi Rao</span>
-            </div>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => toast.success('Resolved serial discrepancy for AF-0105')}
-              className="border-2 border-slate-700 text-slate-800 hover:bg-slate-100 font-bold self-start sm:self-auto text-xs"
-            >
-              Resolve Discrepancy
-            </Button>
-          </div>
-        </Card>
+        {discrepancies.length === 0 ? (
+          <Card className="p-5 border border-slate-200 rounded-xl shadow-xs bg-white text-sm text-slate-500 text-center">
+            No open discrepancies — every in-progress audit is clean so far.
+          </Card>
+        ) : (
+          <Card className="p-5 border-2 border-red-200 rounded-xl shadow-xs bg-white divide-y divide-slate-100">
+            {discrepancies.map((d) => (
+              <div key={d.id} className="py-3.5 first:pt-0 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <span className="font-bold text-slate-900 text-sm">{d.asset_tag} - {d.asset_name}</span>
+                  <span className={`block text-xs font-semibold mt-0.5 ${d.status === 'missing' ? 'text-red-700' : 'text-amber-700'}`}>
+                    {d.status === 'missing' ? `Missing from ${d.expected_location_name}` : `${d.status === 'damaged' ? 'Damaged' : 'Misplaced'} — ${d.cycle_name}`}
+                    {d.remarks ? ` — ${d.remarks}` : ''}
+                  </span>
+                </div>
+                <div className="flex gap-2 self-start sm:self-auto">
+                  {canWriteOff && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      isLoading={changeAssetStatus.isPending}
+                      onClick={() => {
+                        changeAssetStatus.mutate(
+                          { assetId: d.asset_id, status: 'lost', reason: `Flagged for write-off during audit "${d.cycle_name}"` },
+                          {
+                            onSuccess: () => toast.success(`${d.asset_tag} flagged for write-off`),
+                            onError: (err) => toast.error(apiErrorMessage(err)),
+                          },
+                        );
+                      }}
+                      className="border-2 border-red-400 text-red-800 hover:bg-red-50 font-bold text-xs"
+                    >
+                      Flag for Write-off
+                    </Button>
+                  )}
+                  {canExecute && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      isLoading={checkItem.isPending}
+                      onClick={() => {
+                        checkItem.mutate(
+                          { cycleId: d.audit_cycle_id, itemId: d.id, status: 'found', remarks: 'Resolved from discrepancy queue' },
+                          {
+                            onSuccess: () => toast.success(`${d.asset_tag} marked as found`),
+                            onError: (err) => toast.error(apiErrorMessage(err)),
+                          },
+                        );
+                      }}
+                      className="border-2 border-slate-700 text-slate-800 hover:bg-slate-100 font-bold text-xs"
+                    >
+                      Resolve Discrepancy
+                    </Button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </Card>
+        )}
       </div>
 
       {/* Filter Bar */}
@@ -277,58 +303,19 @@ export function AuditPage() {
                   <TableHeader className="font-bold text-slate-700 uppercase text-xs">Cycle Name</TableHeader>
                   <TableHeader className="font-bold text-slate-700 uppercase text-xs">Date</TableHeader>
                   <TableHeader className="font-bold text-slate-700 uppercase text-xs">Verified</TableHeader>
-                  <TableHeader className="font-bold text-slate-700 uppercase text-xs">Discrepancies</TableHeader>
+                  <TableHeader className="font-bold text-slate-700 uppercase text-xs">Unverified</TableHeader>
                   <TableHeader className="font-bold text-slate-700 uppercase text-xs">Status</TableHeader>
                   <TableHeader className="font-bold text-slate-700 uppercase text-xs text-right">Actions</TableHeader>
                 </TableRow>
               </TableHead>
               <TableBody>
-                {/* Screen 8 Static Sample Rows */}
-                <TableRow className="hover:bg-slate-50 transition-colors">
-                  <TableCell className="font-bold text-slate-900">Q1 2026 Annual Audit</TableCell>
-                  <TableCell className="text-sm font-mono text-slate-600">Mar 10</TableCell>
-                  <TableCell className="text-sm font-bold text-indigo-700">142 / 150</TableCell>
-                  <TableCell className="text-sm font-bold text-red-600">3</TableCell>
-                  <TableCell>
-                    <span className="px-3 py-0.5 rounded-full text-xs font-bold border bg-indigo-100 text-indigo-800 border-indigo-300 shadow-2xs">
-                      In Progress
-                    </span>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => toast.success('Opening Q1 2026 Annual Audit details')}
-                      className="text-xs py-1 px-2.5 flex items-center gap-1 ml-auto"
-                    >
-                      <Eye className="w-3.5 h-3.5 text-slate-500" /> Details & Verify
-                    </Button>
-                  </TableCell>
-                </TableRow>
-
-                <TableRow className="hover:bg-slate-50 transition-colors">
-                  <TableCell className="font-bold text-slate-900">IT Dept Equipment Check</TableCell>
-                  <TableCell className="text-sm font-mono text-slate-600">Feb 15</TableCell>
-                  <TableCell className="text-sm font-bold text-emerald-700">45 / 45</TableCell>
-                  <TableCell className="text-sm font-bold text-slate-500">0</TableCell>
-                  <TableCell>
-                    <span className="px-3 py-0.5 rounded-full text-xs font-bold border bg-slate-100 text-slate-800 border-slate-300 shadow-2xs">
-                      Closed
-                    </span>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => toast.success('Generating equipment check report')}
-                      className="text-xs py-1 px-2.5 flex items-center gap-1 border-slate-300 text-slate-700 hover:bg-slate-50 ml-auto"
-                    >
-                      <FileText className="w-3.5 h-3.5 text-indigo-600" /> Report
-                    </Button>
-                  </TableCell>
-                </TableRow>
-
-                {/* Dynamic backend rows */}
+                {cycles.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center py-8 text-slate-500">
+                      No audit cycles match the selected filters.
+                    </TableCell>
+                  </TableRow>
+                )}
                 {cycles.map((cycle) => {
                   const checked = cycle.checked_items || 0;
                   const total = cycle.total_items || 0;

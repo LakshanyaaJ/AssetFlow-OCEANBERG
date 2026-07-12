@@ -19,11 +19,12 @@ const schema = z.object({
 type FormValues = z.infer<typeof schema>;
 
 interface AllocateModalProps {
+  defaultAssetId?: number;
   onCancel: () => void;
   onSuccess: () => void;
 }
 
-export function AllocateModal({ onCancel, onSuccess }: AllocateModalProps) {
+export function AllocateModal({ defaultAssetId, onCancel, onSuccess }: AllocateModalProps) {
   const { data: assetsData, isLoading: loadingAssets } = useAssets({ status: 'available', limit: 100 });
   const { data: employees = [], isLoading: loadingEmployees } = useEmployees();
   const createAllocation = useCreateAllocation();
@@ -34,6 +35,7 @@ export function AllocateModal({ onCancel, onSuccess }: AllocateModalProps) {
     formState: { errors },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
+    defaultValues: defaultAssetId ? { assetId: defaultAssetId } : undefined,
   });
 
   const onSubmit = (values: FormValues) => {

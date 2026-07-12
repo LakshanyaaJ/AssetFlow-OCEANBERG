@@ -43,6 +43,36 @@ export const auditsRepository = {
     );
   },
 
+  /** Open discrepancies (missing/damaged/misplaced) from cycles still in progress, actionable today. */
+  listOpenDiscrepancies() {
+    return query(
+      `SELECT i.id, i.audit_cycle_id, c.name AS cycle_name, c.status AS cycle_status,
+              a.id AS asset_id, a.asset_tag, a.name AS asset_name,
+              i.status, i.remarks, l.name AS expected_location_name
+       FROM audit_items i
+       JOIN audit_cycles c ON c.id = i.audit_cycle_id
+       JOIN assets a ON a.id = i.asset_id
+       JOIN locations l ON l.id = i.expected_location_id
+       WHERE i.status IN ('missing', 'damaged', 'misplaced') AND c.status = 'in_progress'
+       ORDER BY i.checked_at DESC
+       LIMIT 20`,
+    );
+  },
+
+  /** Every audit item ever recorded against a given asset, across all cycles. */
+  listItemsByAsset(assetId: number) {
+    return query(
+      `SELECT i.id, i.audit_cycle_id, c.name AS cycle_name, i.status, i.remarks,
+              i.checked_at, u.full_name AS checked_by_name
+       FROM audit_items i
+       JOIN audit_cycles c ON c.id = i.audit_cycle_id
+       LEFT JOIN users u ON u.id = i.checked_by
+       WHERE i.asset_id = $1
+       ORDER BY coalesce(i.checked_at, c.created_at) DESC`,
+      [assetId],
+    );
+  },
+
   async insertCycle(data: { name: string; locationId?: number | null; startsOn: string; endsOn: string; createdBy: number }) {
     const row = await queryOne<{ id: number }>(
       `INSERT INTO audit_cycles (name, location_id, starts_on, ends_on, created_by)

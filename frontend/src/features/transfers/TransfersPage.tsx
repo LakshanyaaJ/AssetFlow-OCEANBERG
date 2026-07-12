@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { useAllocations } from './api/useTransfersAndAllocations';
+import { useAllocations, useTransfers, useCompleteTransfer, useCancelTransfer } from './api/useTransfersAndAllocations';
+import { useAuth } from '../auth/AuthContext';
 import { AllocateModal } from './components/AllocateModal';
 import { ReturnModal } from './components/ReturnModal';
 import { TransferRequestModal } from './components/TransferRequestModal';
@@ -7,51 +8,84 @@ import { TransferDecisionModal } from './components/TransferDecisionModal';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
 import { Modal } from '../../components/ui/Modal';
-import { AlertTriangle, Plus } from 'lucide-react';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/Table';
+import { Plus, RefreshCw } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { apiErrorMessage } from '../../lib/api';
+import { formatDate, formatDateTime, humanize } from '../../lib/format';
 
 function classNames(...classes: string[]) {
   return classes.filter(Boolean).join(' ');
 }
 
-export function TransfersPage() {
-  const [selectedAssetTag, setSelectedAssetTag] = useState<string>('AF-0114');
-  const [toEmployee, setToEmployee] = useState<string>('');
-  const [transferReason, setTransferReason] = useState<string>('');
+const transferStatusColors: Record<string, string> = {
+  pending: 'bg-amber-100 text-amber-800',
+  approved: 'bg-blue-100 text-blue-800',
+  completed: 'bg-emerald-100 text-emerald-800',
+  rejected: 'bg-red-100 text-red-800',
+  cancelled: 'bg-slate-100 text-slate-600',
+};
 
-  // Modals state for preserving CRUD functions
+export function TransfersPage() {
+  const { user, hasPermission } = useAuth();
+  const canApproveTransfers = hasPermission('transfer.approve');
+  const canManageAllocations = hasPermission('allocation.manage');
+
+  const [transferStatusFilter, setTransferStatusFilter] = useState('pending');
+
+  // Modals state
   const [isAllocateOpen, setIsAllocateOpen] = useState(false);
   const [isReturnOpen, setIsReturnOpen] = useState(false);
   const [selectedAllocationId, setSelectedAllocationId] = useState<number | null>(null);
   const [isTransferRequestOpen, setIsTransferRequestOpen] = useState(false);
   const [isDecisionOpen, setIsDecisionOpen] = useState(false);
   const [selectedTransferId, setSelectedTransferId] = useState<number | null>(null);
-  const [decisionType] = useState<'approved' | 'rejected'>('approved');
+  const [decisionType, setDecisionType] = useState<'approved' | 'rejected'>('approved');
 
-  // Queries
-  const { data: allocationsData } = useAllocations();
+  const { data: activeAllocations, isLoading: loadingAllocations, refetch: refetchAllocations } = useAllocations({ active: 'true', limit: 50 });
+  const { data: recentAllocations } = useAllocations({ limit: 8 });
+  const { data: transfersData, isLoading: loadingTransfers, refetch: refetchTransfers } = useTransfers(
+    transferStatusFilter ? { status: transferStatusFilter, limit: 50 } : { limit: 50 },
+  );
+  const completeTransfer = useCompleteTransfer();
+  const cancelTransfer = useCancelTransfer();
 
-  const handleSubmitTransferRequest = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!toEmployee) {
-      toast.error('Please select target employee');
-      return;
-    }
-    toast.success('Transfer request submitted successfully to Priya Shah and Department Head.');
-    setToEmployee('');
-    setTransferReason('');
-  };
+  function openReturn(allocationId: number) {
+    setSelectedAllocationId(allocationId);
+    setIsReturnOpen(true);
+  }
 
-  const isAllocatedToPriya = selectedAssetTag === 'AF-0114';
+  function openDecision(transferId: number, decision: 'approved' | 'rejected') {
+    setSelectedTransferId(transferId);
+    setDecisionType(decision);
+    setIsDecisionOpen(true);
+  }
+
+  function handleComplete(id: number) {
+    completeTransfer.mutate(id, {
+      onSuccess: () => toast.success('Transfer marked complete'),
+      onError: (err) => toast.error(apiErrorMessage(err)),
+    });
+  }
+
+  function handleCancel(id: number) {
+    cancelTransfer.mutate(id, {
+      onSuccess: () => toast.success('Transfer request cancelled'),
+      onError: (err) => toast.error(apiErrorMessage(err)),
+    });
+  }
+
+  const allocations = activeAllocations?.data || [];
+  const transfers = transfersData?.data || [];
 
   return (
-    <div className="space-y-8 max-w-5xl mx-auto pb-12">
+    <div className="space-y-8 max-w-6xl mx-auto pb-12">
       {/* Header */}
       <div className="sm:flex sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">Asset allocation & Transfer</h1>
           <p className="mt-1 text-sm text-slate-500">
-            Manage direct allocations or submit inter-employee and departmental transfer requests.
+            Manage direct allocations, review inter-employee returns, and decide transfer requests.
           </p>
         </div>
         <div className="mt-4 sm:mt-0 flex gap-2">
@@ -64,114 +98,164 @@ export function TransfersPage() {
         </div>
       </div>
 
-      {/* Unified Allocation & Transfer Form matching Screen 5 (double-allocation block in action) */}
-      <Card className="p-6 border-2 border-slate-300 rounded-xl shadow-sm bg-white space-y-6">
-        <form onSubmit={handleSubmitTransferRequest} className="space-y-5">
-          {/* Asset selection dropdown */}
-          <div>
-            <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Asset</label>
-            <select
-              value={selectedAssetTag}
-              onChange={(e) => setSelectedAssetTag(e.target.value)}
-              className="w-full px-3 py-2 border-2 border-slate-300 rounded-lg text-sm font-semibold text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-slate-800"
-            >
-              <option value="AF-0114">AF-0114 - Dell laptop</option>
-              <option value="AF-1012">AF-1012 - Dell Latitude</option>
-              <option value="AF-2201">AF-2201 - Office Chair (Available)</option>
-            </select>
-          </div>
-
-          {/* Red Warning Banner when an already allocated asset is selected (Screen 5 double-allocation block) */}
-          {isAllocatedToPriya && (
-            <div className="bg-red-100 border-2 border-red-400 text-red-900 p-3.5 rounded-lg font-bold text-sm flex items-center shadow-xs">
-              <AlertTriangle className="w-5 h-5 mr-3 flex-shrink-0 text-red-600" />
-              <span>Already allocated to Priya shah (Engineering) Direct re-allocation is blocked - submit a transfer request below</span>
-            </div>
-          )}
-
-          {/* From field */}
-          <div>
-            <label className="block text-xs font-bold text-slate-700 uppercase mb-1">From</label>
-            <input
-              type="text"
-              readOnly
-              value={isAllocatedToPriya ? 'Priya Shah' : 'Unassigned (Warehouse)'}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm font-semibold text-slate-600 bg-slate-100 cursor-not-allowed"
-            />
-          </div>
-
-          {/* To field */}
-          <div>
-            <label className="block text-xs font-bold text-slate-700 uppercase mb-1">To</label>
-            <select
-              value={toEmployee}
-              onChange={(e) => setToEmployee(e.target.value)}
-              className="w-full px-3 py-2 border-2 border-slate-300 rounded-lg text-sm font-semibold text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-slate-800"
-            >
-              <option value="">Select Employee...</option>
-              <option value="Arjun Nair">Arjun Nair (Facilities)</option>
-              <option value="Sam Iqbal">Sam Iqbal (Field Ops)</option>
-              <option value="Aditi Rao">Aditi Rao (Engineering)</option>
-            </select>
-          </div>
-
-          {/* Reason field */}
-          <div>
-            <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Reason</label>
-            <textarea
-              rows={2}
-              placeholder="Explain the reason for transfer or allocation..."
-              value={transferReason}
-              onChange={(e) => setTransferReason(e.target.value)}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm font-medium text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-slate-800"
-            />
-          </div>
-
-          {/* Action button */}
-          <div className="pt-2">
-            <Button
-              type="submit"
-              className="bg-slate-900 hover:bg-slate-800 text-white font-bold px-6 py-2.5 rounded-lg shadow-sm"
-            >
-              Submit Request
-            </Button>
-          </div>
-        </form>
-      </Card>
-
-      {/* Allocation History Section matching Screen 5 */}
+      {/* Active Allocations */}
       <div className="space-y-3">
-        <h2 className="text-lg font-bold tracking-tight text-slate-900">Allocation History</h2>
-        <Card className="p-5 border border-slate-200 rounded-xl shadow-xs bg-white">
-          <ul className="space-y-3 text-sm font-medium text-slate-800 divide-y divide-slate-100">
-            <li className="pt-3 first:pt-0 flex items-center justify-between">
-              <span className="font-semibold text-slate-900">Mar 12 - Allocated to Priya shah - Engineering</span>
-              <span className="text-xs font-mono text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded font-bold">Active</span>
-            </li>
-            <li className="pt-3 flex items-center justify-between">
-              <span className="font-semibold text-slate-700">Jan 04 - Returned by Arjun Nair - condition good</span>
-              <span className="text-xs font-mono text-slate-500 bg-slate-100 px-2 py-0.5 rounded">Returned</span>
-            </li>
-            {allocationsData?.data?.slice(0, 3).map((a) => (
-              <li key={a.id} className="pt-3 flex items-center justify-between">
-                <span className="font-semibold text-slate-800">
-                  {new Date(a.allocated_at).toLocaleDateString()} - Allocated to {a.employee_name} ({a.asset_tag})
-                </span>
-                <span
-                  className={classNames(
-                    a.is_active ? 'text-indigo-600 bg-indigo-50 font-bold' : 'text-slate-500 bg-slate-100',
-                    'text-xs font-mono px-2 py-0.5 rounded'
-                  )}
-                >
-                  {a.is_active ? 'Active' : 'Returned'}
-                </span>
-              </li>
-            ))}
-          </ul>
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-bold tracking-tight text-slate-900">Active Allocations</h2>
+          <Button variant="outline" size="sm" onClick={() => refetchAllocations()} className="flex items-center gap-1.5 text-xs">
+            <RefreshCw className="w-3.5 h-3.5" /> Refresh
+          </Button>
+        </div>
+        <Card className="border border-slate-200 rounded-xl overflow-hidden shadow-xs bg-white">
+          {loadingAllocations ? (
+            <div className="p-8 text-center text-slate-400 text-sm">Loading active allocations…</div>
+          ) : (
+            <Table>
+              <TableHead>
+                <TableRow className="bg-slate-50">
+                  <TableHeader className="font-bold text-slate-700 uppercase text-xs">Asset</TableHeader>
+                  <TableHeader className="font-bold text-slate-700 uppercase text-xs">Employee</TableHeader>
+                  <TableHeader className="font-bold text-slate-700 uppercase text-xs">Allocated</TableHeader>
+                  <TableHeader className="font-bold text-slate-700 uppercase text-xs">Due</TableHeader>
+                  <TableHeader className="font-bold text-slate-700 uppercase text-xs text-right">Action</TableHeader>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {allocations.map((a) => (
+                  <TableRow key={a.id} className="hover:bg-slate-50">
+                    <TableCell className="font-semibold text-slate-900">{a.asset_name} <span className="text-xs font-mono text-slate-400">({a.asset_tag})</span></TableCell>
+                    <TableCell className="text-slate-700">{a.employee_name} <span className="text-xs text-slate-400">({a.employee_code})</span></TableCell>
+                    <TableCell className="text-slate-600 text-sm">{formatDate(a.allocated_at)}</TableCell>
+                    <TableCell className="text-sm">
+                      {a.due_at ? (
+                        <span className={a.is_overdue ? 'text-red-600 font-bold' : 'text-slate-600'}>{formatDate(a.due_at)}{a.is_overdue ? ' (Overdue)' : ''}</span>
+                      ) : '—'}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {canManageAllocations && (
+                        <Button size="sm" variant="outline" onClick={() => openReturn(a.id)} className="text-xs">
+                          Process Return
+                        </Button>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {allocations.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center py-8 text-slate-500">No assets are currently allocated.</TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          )}
         </Card>
       </div>
 
-      {/* Preserved Modals wrapped properly */}
+      {/* Transfer Requests */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between flex-wrap gap-3">
+          <h2 className="text-lg font-bold tracking-tight text-slate-900">Transfer Requests</h2>
+          <div className="flex items-center gap-2">
+            <select
+              value={transferStatusFilter}
+              onChange={(e) => setTransferStatusFilter(e.target.value)}
+              className="px-3 py-1.5 border border-slate-300 rounded-lg text-xs font-semibold text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-slate-800"
+            >
+              <option value="">All Statuses</option>
+              <option value="pending">Pending</option>
+              <option value="approved">Approved</option>
+              <option value="completed">Completed</option>
+              <option value="rejected">Rejected</option>
+              <option value="cancelled">Cancelled</option>
+            </select>
+            <Button variant="outline" size="sm" onClick={() => refetchTransfers()} className="flex items-center gap-1.5 text-xs">
+              <RefreshCw className="w-3.5 h-3.5" /> Refresh
+            </Button>
+          </div>
+        </div>
+        <Card className="border border-slate-200 rounded-xl overflow-hidden shadow-xs bg-white">
+          {loadingTransfers ? (
+            <div className="p-8 text-center text-slate-400 text-sm">Loading transfer requests…</div>
+          ) : (
+            <Table>
+              <TableHead>
+                <TableRow className="bg-slate-50">
+                  <TableHeader className="font-bold text-slate-700 uppercase text-xs">Asset</TableHeader>
+                  <TableHeader className="font-bold text-slate-700 uppercase text-xs">Route</TableHeader>
+                  <TableHeader className="font-bold text-slate-700 uppercase text-xs">Requested By</TableHeader>
+                  <TableHeader className="font-bold text-slate-700 uppercase text-xs">Status</TableHeader>
+                  <TableHeader className="font-bold text-slate-700 uppercase text-xs text-right">Action</TableHeader>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {transfers.map((t) => (
+                  <TableRow key={t.id} className="hover:bg-slate-50">
+                    <TableCell className="font-semibold text-slate-900">{t.asset_name} <span className="text-xs font-mono text-slate-400">({t.asset_tag})</span></TableCell>
+                    <TableCell className="text-slate-700 text-sm">{t.from_location_name} → {t.to_location_name}</TableCell>
+                    <TableCell className="text-slate-600 text-sm">{t.requested_by_name}<br /><span className="text-xs text-slate-400">{formatDateTime(t.requested_at)}</span></TableCell>
+                    <TableCell>
+                      <span className={classNames(transferStatusColors[t.status] || 'bg-gray-100 text-gray-800', 'px-2.5 py-0.5 rounded-full text-xs font-bold capitalize')}>
+                        {humanize(t.status)}
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-2">
+                        {t.status === 'pending' && canApproveTransfers && (
+                          <>
+                            <Button size="sm" variant="primary" onClick={() => openDecision(t.id, 'approved')} className="text-xs">Approve</Button>
+                            <Button size="sm" variant="danger" onClick={() => openDecision(t.id, 'rejected')} className="text-xs">Reject</Button>
+                          </>
+                        )}
+                        {t.status === 'approved' && canApproveTransfers && (
+                          <Button size="sm" variant="primary" onClick={() => handleComplete(t.id)} isLoading={completeTransfer.isPending} className="text-xs">Complete</Button>
+                        )}
+                        {t.status === 'pending' && t.requested_by === user?.id && (
+                          <Button size="sm" variant="outline" onClick={() => handleCancel(t.id)} isLoading={cancelTransfer.isPending} className="text-xs">Cancel</Button>
+                        )}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {transfers.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center py-8 text-slate-500">No transfer requests match this filter.</TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          )}
+        </Card>
+      </div>
+
+      {/* Recent Allocation Activity */}
+      <div className="space-y-3">
+        <h2 className="text-lg font-bold tracking-tight text-slate-900">Recent Allocation Activity</h2>
+        <Card className="p-5 border border-slate-200 rounded-xl shadow-xs bg-white">
+          {recentAllocations?.data && recentAllocations.data.length > 0 ? (
+            <ul className="space-y-3 text-sm font-medium text-slate-800 divide-y divide-slate-100">
+              {recentAllocations.data.map((a) => (
+                <li key={a.id} className="pt-3 first:pt-0 flex items-center justify-between">
+                  <span className="font-semibold text-slate-800">
+                    {formatDate(a.allocated_at)} — Allocated to {a.employee_name} ({a.asset_tag})
+                  </span>
+                  <span
+                    className={classNames(
+                      a.is_active ? 'text-indigo-600 bg-indigo-50 font-bold' : 'text-slate-500 bg-slate-100',
+                      'text-xs font-mono px-2 py-0.5 rounded'
+                    )}
+                  >
+                    {a.is_active ? 'Active' : 'Returned'}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-sm text-slate-500 text-center py-4">No allocation activity yet.</p>
+          )}
+        </Card>
+      </div>
+
+      {/* Modals */}
       <Modal isOpen={isAllocateOpen} onClose={() => setIsAllocateOpen(false)} title="New Asset Allocation">
         <AllocateModal onCancel={() => setIsAllocateOpen(false)} onSuccess={() => setIsAllocateOpen(false)} />
       </Modal>

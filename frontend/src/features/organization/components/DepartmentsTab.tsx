@@ -1,8 +1,10 @@
 import { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useDepartments, Department } from '../api/useOrganization';
-import { Search, Plus, Filter, MoreHorizontal, ChevronRight, ChevronDown, Edit, Trash2 } from 'lucide-react';
+import { Search, Plus, ChevronRight, ChevronDown, Edit } from 'lucide-react';
 import { Button } from '../../../components/ui/Button';
+import { Modal } from '../../../components/ui/Modal';
+import { DepartmentFormModal } from './DepartmentFormModal';
 
 // Badge Component for Status
 const Badge = ({ status }: { status: string }) => {
@@ -15,6 +17,18 @@ export function DepartmentsTab() {
   const [searchTerm, setSearchTerm] = useState('');
   const [isTreeView, setIsTreeView] = useState(true);
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set(['1', '2', '5'])); // Default expand some parents
+  const [editing, setEditing] = useState<Department | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  function openCreate() {
+    setEditing(null);
+    setIsModalOpen(true);
+  }
+
+  function openEdit(dept: Department) {
+    setEditing(dept);
+    setIsModalOpen(true);
+  }
 
   // Build tree hierarchy
   const buildTree = (nodes: Department[], parentId: string | null = null, depth = 0): (Department & { depth: number; hasChildren: boolean })[] => {
@@ -78,9 +92,10 @@ export function DepartmentsTab() {
           <Button variant="outline" className="bg-white" onClick={() => { setIsTreeView(!isTreeView); setSearchTerm(''); }}>
             {isTreeView ? 'List View' : 'Tree View'}
           </Button>
-          <Button variant="outline" className="bg-white"><Filter className="w-4 h-4 mr-2"/> Filter</Button>
         </div>
-        <Button className="bg-indigo-600 hover:bg-indigo-700 text-white"><Plus className="w-4 h-4 mr-2"/> Create Department</Button>
+        <Button className="bg-indigo-600 hover:bg-indigo-700 text-white" onClick={openCreate}>
+          <Plus className="w-4 h-4 mr-2"/> Create Department
+        </Button>
       </div>
 
       {/* Table */}
@@ -129,9 +144,9 @@ export function DepartmentsTab() {
                   <td className="px-6 py-4 whitespace-nowrap"><Badge status={dept.status} /></td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button className="text-gray-400 hover:text-indigo-600"><Edit className="w-4 h-4"/></button>
-                      <button className="text-gray-400 hover:text-red-600"><Trash2 className="w-4 h-4"/></button>
-                      <button className="text-gray-400 hover:text-gray-600"><MoreHorizontal className="w-4 h-4"/></button>
+                      <button className="text-gray-400 hover:text-indigo-600" onClick={() => openEdit(dept)}>
+                        <Edit className="w-4 h-4"/>
+                      </button>
                     </div>
                   </td>
                 </tr>
@@ -150,6 +165,14 @@ export function DepartmentsTab() {
           </div>
         </div>
       </div>
+
+      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={editing ? 'Edit Department' : 'Create Department'}>
+        <DepartmentFormModal
+          initialData={editing ?? undefined}
+          onCancel={() => setIsModalOpen(false)}
+          onSuccess={() => setIsModalOpen(false)}
+        />
+      </Modal>
     </div>
   );
 }

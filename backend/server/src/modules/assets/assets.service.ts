@@ -38,8 +38,11 @@ export const assetsService = {
   },
 
   async create(data: Record<string, unknown>, actorId: number, ip?: string) {
-    const assetTag = (data.asset_tag as string | undefined) ?? (await assetsRepository.nextAssetTag());
-    const id = await assetsRepository.create({ ...data, asset_tag: assetTag }, actorId);
+    const { id, assetTag } = await withTransaction(async (client) => {
+      const assetTag = (data.asset_tag as string | undefined) ?? (await assetsRepository.nextAssetTag(client));
+      const id = await assetsRepository.create(client, { ...data, asset_tag: assetTag }, actorId);
+      return { id, assetTag };
+    });
     await logActivity({
       userId: actorId, action: 'asset.create', entityType: 'asset', entityId: id,
       details: { asset_tag: assetTag, name: data.name }, ip,

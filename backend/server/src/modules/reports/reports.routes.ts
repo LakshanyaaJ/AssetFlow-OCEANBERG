@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { authenticate, authorize } from '../../middleware/auth';
+import { authenticate, authorize, getRolePermissions } from '../../middleware/auth';
 import { asyncHandler } from '../../utils/asyncHandler';
 import { ok } from '../../utils/response';
 import { reportsRepository } from './reports.repository';
@@ -7,12 +7,19 @@ import { reportsRepository } from './reports.repository';
 export const reportsRouter = Router();
 reportsRouter.use(authenticate);
 
-/** Dashboard: any authenticated user (counts only, no sensitive detail). */
-reportsRouter.get('/dashboard', asyncHandler(async (_req, res) => {
+/**
+ * Dashboard: any authenticated user gets counts (no sensitive detail).
+ * recent_activity names other users' actions org-wide, so it's only
+ * included for roles that actually hold activity.read/report.read —
+ * otherwise it's omitted rather than leaked to every employee.
+ */
+reportsRouter.get('/dashboard', asyncHandler(async (req, res) => {
+  const perms = await getRolePermissions(req.user!.roleId);
+  const canSeeActivity = perms.has('activity.read') || perms.has('report.read');
   const [counts, byStatus, recent] = await Promise.all([
     reportsRepository.dashboardCounts(),
     reportsRepository.assetsByStatus(),
-    reportsRepository.recentActivity(10),
+    canSeeActivity ? reportsRepository.recentActivity(10) : Promise.resolve([]),
   ]);
   ok(res, { counts, assets_by_status: byStatus, recent_activity: recent });
 }));

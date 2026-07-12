@@ -51,13 +51,13 @@ export function MaintenancePage() {
 
   const { data: listRes, isLoading: loadingList, refetch } = useMaintenanceList(queryParams);
   const { data: statsData, isLoading: loadingStats } = useMaintenanceStats();
-  const { data: assetsRes } = useAssets({ limit: 200 });
+  const { data: assetsRes } = useAssets({ limit: 100 });
 
   // Raw employees for assignment dropdowns
   const { data: rawEmployees = [] } = useQuery({
     queryKey: ['raw-employees-maintenance'],
     queryFn: async () => {
-      const res = await api.get<{ success: boolean; data: any[] }>('/employees?limit=200');
+      const res = await api.get<{ success: boolean; data: any[] }>('/employees?limit=100');
       return (res.data?.data || []).map((e) => ({
         id: Number(e.id),
         full_name: e.full_name || e.name || 'Technician',
@@ -81,62 +81,14 @@ export function MaintenancePage() {
       id: 'reported',
       title: 'Reported',
       badgeClass: 'bg-amber-100 text-amber-800 border-amber-300',
-      items: [
-        ...requests.filter((r) => r.status === 'pending'),
-        {
-          id: 9901,
-          asset_id: 1,
-          asset_tag: 'AF-0055',
-          asset_name: 'AC Unit',
-          title: 'Not cooling',
-          description: 'Air conditioner in server room stopped blowing cold air.',
-          priority: 'critical' as const,
-          status: 'pending' as const,
-          maintenance_type: 'corrective' as const,
-          cost: null,
-          resolution: null,
-          scheduled_for: null,
-          reported_by: 1,
-          reported_by_name: 'System Alert',
-          decided_by: null,
-          decided_by_name: null,
-          requested_at: new Date().toISOString(),
-          decided_at: null,
-          completed_at: null,
-          assignments: [],
-        },
-      ],
+      items: requests.filter((r) => r.status === 'pending'),
       showAddBtn: true,
     },
     {
       id: 'in_repair',
       title: 'In Repair',
       badgeClass: 'bg-indigo-100 text-indigo-800 border-indigo-300',
-      items: [
-        ...requests.filter((r) => r.status === 'approved' || r.status === 'in_progress'),
-        {
-          id: 9902,
-          asset_id: 2,
-          asset_tag: 'AF-0102',
-          asset_name: 'Office Printer',
-          title: 'Paper jam and roller replacement',
-          description: 'Constant paper jamming on tray 2.',
-          priority: 'medium' as const,
-          status: 'in_progress' as const,
-          maintenance_type: 'corrective' as const,
-          cost: 150,
-          resolution: null,
-          scheduled_for: null,
-          reported_by: 1,
-          reported_by_name: 'IT Support',
-          decided_by: 1,
-          decided_by_name: 'Admin',
-          requested_at: new Date().toISOString(),
-          decided_at: new Date().toISOString(),
-          completed_at: null,
-          assignments: [{ id: 1, employee_id: 3, employee_name: 'Tech Rajesh', assigned_at: new Date().toISOString(), notes: null }],
-        },
-      ],
+      items: requests.filter((r) => r.status === 'approved' || r.status === 'in_progress'),
       showAddBtn: false,
     },
     {
@@ -150,31 +102,7 @@ export function MaintenancePage() {
       id: 'resolved',
       title: 'Resolved',
       badgeClass: 'bg-emerald-100 text-emerald-800 border-emerald-300',
-      items: [
-        ...requests.filter((r) => r.status === 'completed'),
-        {
-          id: 9903,
-          asset_id: 3,
-          asset_tag: 'AF-0012',
-          asset_name: 'Ergonomic Chair',
-          title: 'Wheel fixed and height adjusted',
-          description: 'Replaced broken caster wheel.',
-          priority: 'low' as const,
-          status: 'completed' as const,
-          maintenance_type: 'corrective' as const,
-          cost: 45,
-          resolution: 'Caster replaced successfully.',
-          scheduled_for: null,
-          reported_by: 1,
-          reported_by_name: 'Arjun Nair',
-          decided_by: 1,
-          decided_by_name: 'Admin',
-          requested_at: new Date().toISOString(),
-          decided_at: new Date().toISOString(),
-          completed_at: new Date().toISOString(),
-          assignments: [],
-        },
-      ],
+      items: requests.filter((r) => r.status === 'completed'),
       showAddBtn: false,
     },
   ];

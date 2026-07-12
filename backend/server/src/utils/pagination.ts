@@ -1,4 +1,5 @@
-import { z } from 'zod';
+import { z, ZodError } from 'zod';
+import { ApiError } from './ApiError';
 import { PageMeta } from './response';
 
 export interface ListParams {
@@ -28,7 +29,18 @@ const baseQuery = z.object({
 
 /** Parse + sanitize list query params against a per-endpoint whitelist. */
 export function parseListParams(raw: Record<string, unknown>, opts: ListOptions): ListParams {
-  const q = baseQuery.parse(raw);
+  let q: z.infer<typeof baseQuery>;
+  try {
+    q = baseQuery.parse(raw);
+  } catch (err) {
+    if (err instanceof ZodError) {
+      throw ApiError.unprocessable(
+        'Invalid query parameters',
+        err.errors.map((e) => ({ field: e.path.join('.'), message: e.message })),
+      );
+    }
+    throw err;
+  }
   const sortBy = q.sortBy && opts.sortable.includes(q.sortBy) ? q.sortBy : opts.defaultSort;
   const filters: Record<string, string> = {};
   for (const [param, column] of Object.entries(opts.filterable ?? {})) {

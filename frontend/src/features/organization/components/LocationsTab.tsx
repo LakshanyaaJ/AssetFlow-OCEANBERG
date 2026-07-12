@@ -1,8 +1,13 @@
 import { useState, useMemo, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { useLocations, Location } from '../api/useOrganization';
-import { Search, Plus, Filter, MoreHorizontal, ChevronRight, ChevronDown, Edit, Trash2, MapPin, GripVertical } from 'lucide-react';
+import { Search, Plus, ChevronRight, ChevronDown, Edit, MapPin, GripVertical } from 'lucide-react';
 import { Button } from '../../../components/ui/Button';
+import { Modal } from '../../../components/ui/Modal';
+import { LocationFormModal } from './LocationFormModal';
+import toast from 'react-hot-toast';
+import { api, apiErrorMessage } from '../../../lib/api';
 
 const Badge = ({ status }: { status: string }) => {
   const bg = status === 'Active' ? 'bg-emerald-100 text-emerald-800' : 
@@ -16,6 +21,19 @@ export function LocationsTab() {
   const [locations, setLocations] = useState<Location[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set(['1', '4']));
+  const [editing, setEditing] = useState<Location | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const queryClient = useQueryClient();
+
+  function openCreate() {
+    setEditing(null);
+    setIsModalOpen(true);
+  }
+
+  function openEdit(loc: Location) {
+    setEditing(loc);
+    setIsModalOpen(true);
+  }
 
   // Drag and Drop State
   const [draggedId, setDraggedId] = useState<string | null>(null);
@@ -113,16 +131,27 @@ export function LocationsTab() {
       return; // Invalid move
     }
 
+    const movedId = draggedId;
     setLocations(prev => prev.map(loc => {
-      if (loc.id === draggedId) {
+      if (loc.id === movedId) {
         return { ...loc, parent_id: targetId };
       }
       return loc;
     }));
-    
+
     // Auto expand the new parent
     setExpandedRows(prev => new Set(prev).add(targetId));
     setDragOverId(null);
+
+    api.patch(`/locations/${movedId}`, { parent_id: Number(targetId) })
+      .then(() => {
+        toast.success('Location hierarchy updated');
+        queryClient.invalidateQueries({ queryKey: ['locations'] });
+      })
+      .catch((err) => {
+        toast.error(apiErrorMessage(err));
+        setLocations(serverLocations); // revert the optimistic move
+      });
   };
 
   if (isLoading) return <div className="p-8 text-center text-gray-500">Loading locations...</div>;
@@ -142,9 +171,10 @@ export function LocationsTab() {
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-          <Button variant="outline" className="bg-white"><Filter className="w-4 h-4 mr-2"/> Filter</Button>
         </div>
-        <Button className="bg-indigo-600 hover:bg-indigo-700 text-white"><Plus className="w-4 h-4 mr-2"/> Create Location</Button>
+        <Button className="bg-indigo-600 hover:bg-indigo-700 text-white" onClick={openCreate}>
+          <Plus className="w-4 h-4 mr-2"/> Create Location
+        </Button>
       </div>
 
       {/* Table */}
@@ -207,9 +237,9 @@ export function LocationsTab() {
                   <td className="px-6 py-4 whitespace-nowrap"><Badge status={loc.status} /></td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button className="text-gray-400 hover:text-indigo-600"><Edit className="w-4 h-4"/></button>
-                      <button className="text-gray-400 hover:text-red-600"><Trash2 className="w-4 h-4"/></button>
-                      <button className="text-gray-400 hover:text-gray-600"><MoreHorizontal className="w-4 h-4"/></button>
+                      <button className="text-gray-400 hover:text-indigo-600" onClick={() => openEdit(loc)}>
+                        <Edit className="w-4 h-4"/>
+                      </button>
                     </div>
                   </td>
                 </tr>
@@ -231,6 +261,14 @@ export function LocationsTab() {
           </div>
         </div>
       </div>
+
+      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={editing ? 'Edit Location' : 'Create Location'}>
+        <LocationFormModal
+          initialData={editing ?? undefined}
+          onCancel={() => setIsModalOpen(false)}
+          onSuccess={() => setIsModalOpen(false)}
+        />
+      </Modal>
     </div>
   );
 }

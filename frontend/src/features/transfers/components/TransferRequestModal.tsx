@@ -17,11 +17,12 @@ const schema = z.object({
 type FormValues = z.infer<typeof schema>;
 
 interface TransferRequestModalProps {
+  defaultAssetId?: number;
   onCancel: () => void;
   onSuccess: () => void;
 }
 
-export function TransferRequestModal({ onCancel, onSuccess }: TransferRequestModalProps) {
+export function TransferRequestModal({ defaultAssetId, onCancel, onSuccess }: TransferRequestModalProps) {
   const { data: assetsData, isLoading: loadingAssets } = useAssets({ limit: 100 });
   const { data: locations = [], isLoading: loadingLocations } = useLocations();
   const createTransfer = useCreateTransfer();
@@ -32,6 +33,7 @@ export function TransferRequestModal({ onCancel, onSuccess }: TransferRequestMod
     formState: { errors },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
+    defaultValues: defaultAssetId ? { assetId: defaultAssetId } : undefined,
   });
 
   const onSubmit = (values: FormValues) => {

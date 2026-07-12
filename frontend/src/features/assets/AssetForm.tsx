@@ -6,6 +6,7 @@ import toast from 'react-hot-toast';
 import { api, apiErrorMessage } from '../../lib/api';
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
+import { useCategories, useLocations } from '../organization/api/useOrganization';
 
 const assetSchema = z.object({
   asset_tag: z.string().trim().max(30).optional(),
@@ -32,6 +33,8 @@ interface AssetFormProps {
 export function AssetForm({ onSuccess, onCancel, initialData }: AssetFormProps) {
   const queryClient = useQueryClient();
   const isEditing = !!initialData?.id;
+  const { data: categories, isLoading: categoriesLoading } = useCategories();
+  const { data: locations, isLoading: locationsLoading } = useLocations();
 
   const {
     register,
@@ -87,14 +90,15 @@ export function AssetForm({ onSuccess, onCancel, initialData }: AssetFormProps) 
           <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
           <select
             {...register('category_id')}
+            disabled={categoriesLoading}
             className={`block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 sm:text-sm ${
               errors.category_id ? 'border-red-300' : ''
             }`}
           >
-            <option value={0} disabled>Select Category</option>
-            {/* TODO: Fetch categories from API */}
-            <option value={1}>Laptops</option>
-            <option value={2}>Vehicles</option>
+            <option value={0} disabled>{categoriesLoading ? 'Loading categories…' : 'Select Category'}</option>
+            {categories?.filter((c) => c.is_active).map((c) => (
+              <option key={c.id} value={c.id}>{c.parent_name ? `${c.parent_name} — ${c.name}` : c.name}</option>
+            ))}
           </select>
           {errors.category_id && <p className="mt-1 text-sm text-red-600">{errors.category_id.message}</p>}
         </div>
@@ -103,14 +107,15 @@ export function AssetForm({ onSuccess, onCancel, initialData }: AssetFormProps) 
           <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
           <select
             {...register('location_id')}
+            disabled={locationsLoading}
             className={`block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 sm:text-sm ${
               errors.location_id ? 'border-red-300' : ''
             }`}
           >
-            <option value={0} disabled>Select Location</option>
-            {/* TODO: Fetch locations from API */}
-            <option value={1}>Headquarters</option>
-            <option value={2}>Branch Office</option>
+            <option value={0} disabled>{locationsLoading ? 'Loading locations…' : 'Select Location'}</option>
+            {locations?.filter((l) => l.status !== 'Closed').map((l) => (
+              <option key={l.id} value={l.id}>{l.name}</option>
+            ))}
           </select>
           {errors.location_id && <p className="mt-1 text-sm text-red-600">{errors.location_id.message}</p>}
         </div>

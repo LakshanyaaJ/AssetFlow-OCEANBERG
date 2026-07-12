@@ -58,6 +58,11 @@ CREATE INDEX idx_audit_cycles_status   ON audit_cycles(status);
 -- notifications (unread badge query runs on every page load)
 CREATE INDEX idx_notifications_unread  ON notifications(user_id, created_at DESC) WHERE NOT is_read;
 CREATE INDEX idx_notifications_user    ON notifications(user_id, created_at DESC);
+-- HARD business rule: at most one 'overdue' notice per (user, entity). Backs the
+-- overdue-sweep cron job's idempotency at the DB level (NOT EXISTS alone races
+-- when two connections evaluate it concurrently at the same cron tick).
+CREATE UNIQUE INDEX uq_overdue_notification ON notifications(user_id, entity_type, entity_id)
+  WHERE n_type = 'overdue';
 
 -- activity logs (timeline per entity + per user)
 CREATE INDEX idx_activity_entity       ON activity_logs(entity_type, entity_id, created_at DESC);

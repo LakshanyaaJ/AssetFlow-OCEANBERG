@@ -1,18 +1,22 @@
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
-import { Box, Users, CalendarCheck, ArrowRightLeft, AlertTriangle, Plus } from 'lucide-react';
+import { Box, Users, Wrench, CalendarCheck, ArrowRightLeft, RotateCcw, AlertTriangle, Plus } from 'lucide-react';
+import { useDashboard } from './api/useDashboard';
+import { formatRelativeTime, humanizeAction } from '../../lib/format';
 
 export function Dashboard() {
   const navigate = useNavigate();
+  const { data, isLoading, isError } = useDashboard();
 
+  const counts = data?.counts;
   const overviewStats = [
-    { label: 'Available', value: '128', icon: Box, color: 'text-emerald-700 bg-emerald-50 border-emerald-200' },
-    { label: 'Allocated', value: '35', icon: Users, color: 'text-blue-700 bg-blue-50 border-blue-200' },
-    { label: 'Available', value: '0', icon: Box, color: 'text-slate-600 bg-slate-50 border-slate-200' },
-    { label: 'Active Bookings', value: '4', icon: CalendarCheck, color: 'text-indigo-700 bg-indigo-50 border-indigo-200' },
-    { label: 'Pending Transfers', value: '3', icon: ArrowRightLeft, color: 'text-amber-700 bg-amber-50 border-amber-200' },
-    { label: 'Upcoming returns', value: '12', icon: ArrowRightLeft, color: 'text-purple-700 bg-purple-50 border-purple-200' },
+    { label: 'Available', value: counts?.available_assets, icon: Box, color: 'text-emerald-700 bg-emerald-50 border-emerald-200' },
+    { label: 'Allocated', value: counts?.allocated_assets, icon: Users, color: 'text-blue-700 bg-blue-50 border-blue-200' },
+    { label: 'Under Maintenance', value: counts?.assets_in_maintenance, icon: Wrench, color: 'text-slate-600 bg-slate-50 border-slate-200' },
+    { label: 'Upcoming Bookings', value: counts?.upcoming_bookings, icon: CalendarCheck, color: 'text-indigo-700 bg-indigo-50 border-indigo-200' },
+    { label: 'Pending Transfers', value: counts?.pending_transfers, icon: ArrowRightLeft, color: 'text-amber-700 bg-amber-50 border-amber-200' },
+    { label: 'Overdue Returns', value: counts?.overdue_allocations, icon: RotateCcw, color: 'text-purple-700 bg-purple-50 border-purple-200' },
   ];
 
   return (
@@ -23,6 +27,12 @@ export function Dashboard() {
         <p className="mt-1 text-sm text-slate-500">Real-time status of enterprise assets, allocations, and daily operations.</p>
       </div>
 
+      {isError && (
+        <div className="p-4 bg-red-50 text-red-700 font-medium rounded-lg border border-red-200">
+          Couldn't load dashboard data. Please refresh the page.
+        </div>
+      )}
+
       {/* 6 Summary Stat Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {overviewStats.map((stat, idx) => (
@@ -31,16 +41,25 @@ export function Dashboard() {
               <span className="text-sm font-semibold tracking-wide uppercase">{stat.label}</span>
               <stat.icon className="w-5 h-5 opacity-80" />
             </div>
-            <div className="mt-3 text-3xl font-extrabold tracking-tight">{stat.value}</div>
+            <div className="mt-3 text-3xl font-extrabold tracking-tight">
+              {isLoading ? <span className="inline-block h-8 w-12 bg-black/10 rounded animate-pulse" /> : stat.value ?? 0}
+            </div>
           </Card>
         ))}
       </div>
 
-      {/* Red Alert Banner */}
-      <div className="bg-red-100 border-2 border-red-400 text-red-900 px-4 py-3.5 rounded-lg font-semibold text-sm flex items-center shadow-xs">
-        <AlertTriangle className="w-5 h-5 mr-3 flex-shrink-0 text-red-600 animate-pulse" />
-        <span>3 assets overdue for return - flagged for follow-up</span>
-      </div>
+      {/* Overdue alert banner — only shown when there's something to flag */}
+      {!!counts?.overdue_allocations && (
+        <button
+          onClick={() => navigate('/transfers')}
+          className="w-full text-left bg-red-100 border-2 border-red-400 text-red-900 px-4 py-3.5 rounded-lg font-semibold text-sm flex items-center shadow-xs hover:bg-red-200 transition-colors"
+        >
+          <AlertTriangle className="w-5 h-5 mr-3 flex-shrink-0 text-red-600 animate-pulse" />
+          <span>
+            {counts.overdue_allocations} asset{counts.overdue_allocations === 1 ? '' : 's'} overdue for return — flagged for follow-up
+          </span>
+        </button>
+      )}
 
       {/* Horizontal Action Buttons */}
       <div className="flex flex-wrap items-center gap-3 pt-1">
@@ -72,20 +91,27 @@ export function Dashboard() {
         <h2 className="text-lg font-bold tracking-tight text-slate-900 mb-3">Recent Activity</h2>
         <Card className="p-5 border border-slate-200 shadow-sm bg-white">
           <CardContent className="p-0">
-            <ul className="space-y-3.5 text-sm font-medium text-slate-800 divide-y divide-slate-100">
-              <li className="pt-3 first:pt-0 flex items-center justify-between">
-                <span>Laptop AF-0114 - allocated to Priya shah - IT dept</span>
-                <span className="text-xs font-mono text-slate-400">10m ago</span>
-              </li>
-              <li className="pt-3 flex items-center justify-between">
-                <span>Room B12 - booking confirmed - 2:00 to 3:00 PM</span>
-                <span className="text-xs font-mono text-slate-400">1h ago</span>
-              </li>
-              <li className="pt-3 flex items-center justify-between">
-                <span>Projector AF-0052 - maintenance resolved</span>
-                <span className="text-xs font-mono text-slate-400">3h ago</span>
-              </li>
-            </ul>
+            {isLoading ? (
+              <div className="animate-pulse space-y-3">
+                <div className="h-4 bg-slate-200 rounded" />
+                <div className="h-4 bg-slate-200 rounded w-5/6" />
+                <div className="h-4 bg-slate-200 rounded w-4/6" />
+              </div>
+            ) : data && data.recent_activity.length > 0 ? (
+              <ul className="space-y-3.5 text-sm font-medium text-slate-800 divide-y divide-slate-100">
+                {data.recent_activity.map((entry) => (
+                  <li key={entry.id} className="pt-3 first:pt-0 flex items-center justify-between gap-4">
+                    <span className="truncate">
+                      {humanizeAction(entry.action)}
+                      {entry.user_name ? ` — ${entry.user_name}` : ''}
+                    </span>
+                    <span className="text-xs font-mono text-slate-400 flex-shrink-0">{formatRelativeTime(entry.created_at)}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-sm text-slate-500">No recent activity to show for your role.</p>
+            )}
           </CardContent>
         </Card>
       </div>

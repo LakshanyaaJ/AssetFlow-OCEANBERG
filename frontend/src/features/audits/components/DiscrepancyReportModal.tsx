@@ -2,7 +2,6 @@ import { Modal } from '../../../components/ui/Modal';
 import { Button } from '../../../components/ui/Button';
 import { AuditCycle } from '../api/useAudit';
 import { Download, ShieldAlert } from 'lucide-react';
-import toast from 'react-hot-toast';
 
 interface DiscrepancyReportModalProps {
   isOpen: boolean;
@@ -22,8 +21,19 @@ export function DiscrepancyReportModal({ isOpen, onClose, cycle }: DiscrepancyRe
 
   const discrepancies = items.filter((i) => ['missing', 'damaged', 'misplaced'].includes(i.status));
 
-  const handleExportPDF = () => {
-    toast.success('Discrepancy PDF summary generated and downloading...');
+  const handleExportCsv = () => {
+    const header = ['Asset Tag', 'Asset Name', 'Expected Location', 'Status', 'Remarks'];
+    const rows = discrepancies.map((i) => [i.asset_tag, i.asset_name, i.expected_location_name, i.status, i.remarks ?? '']);
+    const csv = [header, ...rows]
+      .map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+      .join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `audit-${cycle.id}-discrepancies.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
   };
 
   return (
@@ -111,8 +121,8 @@ export function DiscrepancyReportModal({ isOpen, onClose, cycle }: DiscrepancyRe
 
         {/* Footer Actions */}
         <div className="flex justify-between items-center pt-4 border-t border-slate-200">
-          <Button variant="outline" size="sm" onClick={handleExportPDF} className="flex items-center gap-1.5">
-            <Download className="w-4 h-4" /> Export PDF Summary
+          <Button variant="outline" size="sm" onClick={handleExportCsv} className="flex items-center gap-1.5">
+            <Download className="w-4 h-4" /> Export Summary (.CSV)
           </Button>
           <Button variant="secondary" size="sm" onClick={onClose}>
             Close Report

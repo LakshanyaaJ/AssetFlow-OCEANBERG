@@ -26,3 +26,23 @@ export function humanize(value: string | null | undefined): string {
   if (!value) return '—';
   return value.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 }
+
+/** 'asset.status_change' → 'Asset Status Change' */
+export function humanizeAction(value: string | null | undefined): string {
+  if (!value) return '—';
+  return humanize(value.replace(/\./g, ' '));
+}
+
+/** 2026-07-10T12:00:00Z → '3h ago' / '5d ago' / falls back to a short date past ~30 days. */
+export function formatRelativeTime(value: string | null | undefined): string {
+  if (!value) return '—';
+  const diffMs = Date.now() - new Date(value).getTime();
+  const minutes = Math.round(diffMs / 60_000);
+  if (minutes < 1) return 'just now';
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.round(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.round(hours / 24);
+  if (days < 30) return `${days}d ago`;
+  return formatDate(value);
+}

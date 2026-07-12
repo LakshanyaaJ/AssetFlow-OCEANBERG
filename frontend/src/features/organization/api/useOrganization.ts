@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../../lib/api';
 
 export interface Department {
@@ -21,6 +21,18 @@ export interface Location {
   parent_id: string | null;
   capacity: number;
   status: 'Active' | 'Under Maintenance' | 'Closed';
+}
+
+export interface AssetCategory {
+  id: number;
+  name: string;
+  code: string;
+  parent_id: number | null;
+  parent_name: string | null;
+  depreciation_rate: number | null;
+  description: string | null;
+  is_active: boolean;
+  asset_count: number;
 }
 
 export interface Employee {
@@ -106,5 +118,96 @@ export function useEmployees() {
         };
       }) as Employee[];
     }
+  });
+}
+
+export function useCategories() {
+  return useQuery({
+    queryKey: ['asset-categories'],
+    queryFn: async () => {
+      const res = await api.get<ApiListResponse<AssetCategory>>('/asset-categories?limit=100');
+      return res.data.data;
+    },
+  });
+}
+
+export interface CategoryInput {
+  name: string;
+  code: string;
+  parent_id?: number | null;
+  depreciation_rate?: number | null;
+  description?: string | null;
+}
+
+export function useCreateCategory() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: CategoryInput) => api.post('/asset-categories', data),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['asset-categories'] }),
+  });
+}
+
+export function useUpdateCategory() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, ...data }: CategoryInput & { id: number; is_active?: boolean }) =>
+      api.patch(`/asset-categories/${id}`, data),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['asset-categories'] }),
+  });
+}
+
+export function useDeleteCategory() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => api.delete(`/asset-categories/${id}`),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['asset-categories'] }),
+  });
+}
+
+export interface DepartmentInput {
+  name: string;
+  code: string;
+  description?: string | null;
+}
+
+export function useCreateDepartment() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: DepartmentInput) => api.post('/departments', data),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['departments'] }),
+  });
+}
+
+export function useUpdateDepartment() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, ...data }: DepartmentInput & { id: number; is_active?: boolean }) =>
+      api.patch(`/departments/${id}`, data),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['departments'] }),
+  });
+}
+
+export interface LocationInput {
+  name: string;
+  code: string;
+  address?: string | null;
+  city?: string | null;
+  parent_id?: number | null;
+}
+
+export function useCreateLocation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: LocationInput) => api.post('/locations', data),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['locations'] }),
+  });
+}
+
+export function useUpdateLocation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, ...data }: LocationInput & { id: number; is_active?: boolean }) =>
+      api.patch(`/locations/${id}`, data),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['locations'] }),
   });
 }

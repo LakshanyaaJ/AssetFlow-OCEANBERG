@@ -81,6 +81,29 @@ export function useAuditDetails(id: number | null) {
   });
 }
 
+export interface AuditDiscrepancy {
+  id: number;
+  audit_cycle_id: number;
+  cycle_name: string;
+  cycle_status: string;
+  asset_id: number;
+  asset_tag: string;
+  asset_name: string;
+  status: 'missing' | 'damaged' | 'misplaced';
+  remarks: string | null;
+  expected_location_name: string;
+}
+
+export function useAuditDiscrepancies() {
+  return useQuery({
+    queryKey: ['audits', 'discrepancies'],
+    queryFn: async () => {
+      const res = await api.get<{ success: boolean; data: AuditDiscrepancy[] }>('/audits/discrepancies');
+      return res.data.data;
+    },
+  });
+}
+
 export function useCreateAudit() {
   const queryClient = useQueryClient();
   return useMutation({

@@ -1,3 +1,4 @@
+import { PoolClient } from 'pg';
 import { query, queryOne } from '../../config/db';
 import { buildListClause, ListParams } from '../../utils/pagination';
 
@@ -65,8 +66,8 @@ export const assetsRepository = {
     );
   },
 
-  async create(data: Record<string, unknown>, createdBy: number) {
-    const row = await queryOne<{ id: number }>(
+  async create(client: PoolClient, data: Record<string, unknown>, createdBy: number) {
+    const result = await client.query<{ id: number }>(
       `INSERT INTO assets (asset_tag, name, category_id, location_id, serial_number, model,
                            vendor, purchase_date, purchase_cost, warranty_expiry, description, created_by)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING id`,
@@ -77,7 +78,7 @@ export const assetsRepository = {
         data.warranty_expiry ?? null, data.description ?? null, createdBy,
       ],
     );
-    return row!.id;
+    return result.rows[0]!.id;
   },
 
   async update(id: number, data: Record<string, unknown>) {
@@ -121,13 +122,19 @@ export const assetsRepository = {
     await query(`DELETE FROM asset_documents WHERE id = $1 AND asset_id = $2`, [documentId, assetId]);
   },
 
-  /** Next sequential asset tag, e.g. AST-2026-0011 (advisory-locked to avoid duplicates). */
-  async nextAssetTag(): Promise<string> {
+  /**
+   * Next sequential asset tag, e.g. AST-2026-0011. Must run inside the same
+   * transaction as the subsequent insert: pg_advisory_xact_lock serializes
+   * concurrent callers for the same year so two requests can never compute
+   * the same count and collide on the asset_tag UNIQUE constraint.
+   */
+  async nextAssetTag(client: PoolClient): Promise<string> {
     const year = new Date().getFullYear();
-    const row = await queryOne<{ n: number }>(
+    await client.query('SELECT pg_advisory_xact_lock(hashtext($1))', [`asset_tag_${year}`]);
+    const result = await client.query<{ n: number }>(
       `SELECT count(*)::int + 1 AS n FROM assets WHERE asset_tag LIKE $1`,
       [`AST-${year}-%`],
     );
-    return `AST-${year}-${String(row?.n ?? 1).padStart(4, '0')}`;
+    return `AST-${year}-${String(result.rows[0]?.n ?? 1).padStart(4, '0')}`;
   },
 };

@@ -35,6 +35,19 @@ auditsRouter.get('/stats', authorize('audit.read'), asyncHandler(async (req, res
   ok(res, await auditsService.stats());
 }));
 
+auditsRouter.get('/discrepancies', authorize('audit.read'), asyncHandler(async (_req, res) => {
+  ok(res, await auditsService.listDiscrepancies());
+}));
+
+auditsRouter.get(
+  '/asset/:assetId/history',
+  authorize('audit.read'),
+  validate({ params: z.object({ assetId: z.coerce.number().int().positive() }) }),
+  asyncHandler(async (req, res) => {
+    ok(res, await auditsService.historyForAsset(Number(req.params.assetId)));
+  }),
+);
+
 auditsRouter.get('/:id', authorize('audit.read'), validate({ params: idParamSchema }), asyncHandler(async (req, res) => {
   ok(res, await auditsService.get(Number(req.params.id)));
 }));

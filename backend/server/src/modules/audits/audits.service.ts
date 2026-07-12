@@ -36,6 +36,14 @@ export const auditsService = {
     return auditsRepository.stats();
   },
 
+  historyForAsset(assetId: number) {
+    return auditsRepository.listItemsByAsset(assetId);
+  },
+
+  listDiscrepancies() {
+    return auditsRepository.listOpenDiscrepancies();
+  },
+
   async create(
     data: { name: string; locationId?: number | null; startsOn: string; endsOn: string },
     actorId: number,
