@@ -81,11 +81,11 @@ SELECT r.id, p.id FROM roles r JOIN permissions p ON p.code IN (
 
 -- ---------- users (password: Password@123) ----------
 INSERT INTO users (email, password_hash, full_name, role_id) VALUES
-  ('admin@assetflow.io',    '__BCRYPT_HASH__', 'Ava Administrator', (SELECT id FROM roles WHERE name='admin')),
-  ('manager@assetflow.io',  '__BCRYPT_HASH__', 'Miles Manager',     (SELECT id FROM roles WHERE name='manager')),
-  ('employee@assetflow.io', '__BCRYPT_HASH__', 'Elena Employee',    (SELECT id FROM roles WHERE name='employee')),
-  ('tech@assetflow.io',     '__BCRYPT_HASH__', 'Theo Technician',   (SELECT id FROM roles WHERE name='technician')),
-  ('auditor@assetflow.io',  '__BCRYPT_HASH__', 'Aria Auditor',      (SELECT id FROM roles WHERE name='auditor'));
+  ('admin@assetflow.io',    '$2a$10$g7FQUqX1iDBmCippGfMzD.EPQpcvrXTGPRbuvHQLOZ.POxmLJH/WW', 'Ava Administrator', (SELECT id FROM roles WHERE name='admin')),
+  ('manager@assetflow.io',  '$2a$10$g7FQUqX1iDBmCippGfMzD.EPQpcvrXTGPRbuvHQLOZ.POxmLJH/WW', 'Miles Manager',     (SELECT id FROM roles WHERE name='manager')),
+  ('employee@assetflow.io', '$2a$10$g7FQUqX1iDBmCippGfMzD.EPQpcvrXTGPRbuvHQLOZ.POxmLJH/WW', 'Elena Employee',    (SELECT id FROM roles WHERE name='employee')),
+  ('tech@assetflow.io',     '$2a$10$g7FQUqX1iDBmCippGfMzD.EPQpcvrXTGPRbuvHQLOZ.POxmLJH/WW', 'Theo Technician',   (SELECT id FROM roles WHERE name='technician')),
+  ('auditor@assetflow.io',  '$2a$10$g7FQUqX1iDBmCippGfMzD.EPQpcvrXTGPRbuvHQLOZ.POxmLJH/WW', 'Aria Auditor',      (SELECT id FROM roles WHERE name='auditor'));
 
 -- ---------- organization ----------
 INSERT INTO departments (name, code, description) VALUES
