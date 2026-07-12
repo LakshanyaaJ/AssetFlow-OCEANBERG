@@ -94,4 +94,27 @@ export const maintenanceRepository = {
     );
     return !!row;
   },
+
+  async stats() {
+    const row = await queryOne<{
+      pending_requests: number;
+      active_repairs: number;
+      resolved_this_month: number;
+      avg_resolution_hours: number;
+    }>(`
+      SELECT
+        count(*) FILTER (WHERE status = 'pending')::int AS pending_requests,
+        count(*) FILTER (WHERE status IN ('approved', 'in_progress'))::int AS active_repairs,
+        count(*) FILTER (WHERE status = 'completed' AND completed_at >= date_trunc('month', now()))::int AS resolved_this_month,
+        coalesce(round(avg(EXTRACT(EPOCH FROM (completed_at - requested_at)) / 3600.0)::numeric, 1), 0)::float AS avg_resolution_hours
+      FROM maintenance_requests
+    `);
+    return {
+      pendingRequests: row?.pending_requests ?? 0,
+      activeRepairs: row?.active_repairs ?? 0,
+      resolvedThisMonth: row?.resolved_this_month ?? 0,
+      avgResolutionHours: row?.avg_resolution_hours ?? 0,
+    };
+  },
 };
+

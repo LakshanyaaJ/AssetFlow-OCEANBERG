@@ -31,6 +31,10 @@ export const maintenanceService = {
     return row;
   },
 
+  async stats() {
+    return maintenanceRepository.stats();
+  },
+
   async request(
     data: { assetId: number; title: string; description?: string | null; priority: 'low' | 'medium' | 'high' | 'critical'; maintenanceType: 'corrective' | 'preventive' },
     actorId: number,

@@ -108,4 +108,29 @@ export const auditsRepository = {
     );
     return result.rows;
   },
+
+  async stats() {
+    const row = await queryOne<{
+      upcoming_audits: number;
+      active_audits: number;
+      completed_audits: number;
+      missing_assets: number;
+      damaged_assets: number;
+    }>(`
+      SELECT
+        (SELECT count(*)::int FROM audit_cycles WHERE status = 'draft' AND starts_on >= current_date) AS upcoming_audits,
+        (SELECT count(*)::int FROM audit_cycles WHERE status = 'in_progress') AS active_audits,
+        (SELECT count(*)::int FROM audit_cycles WHERE status = 'completed') AS completed_audits,
+        (SELECT count(*)::int FROM audit_items WHERE status = 'missing') AS missing_assets,
+        (SELECT count(*)::int FROM audit_items WHERE status = 'damaged') AS damaged_assets
+    `);
+    return {
+      upcomingAudits: row?.upcoming_audits ?? 0,
+      activeAudits: row?.active_audits ?? 0,
+      completedAudits: row?.completed_audits ?? 0,
+      missingAssets: row?.missing_assets ?? 0,
+      damagedAssets: row?.damaged_assets ?? 0,
+    };
+  },
 };
+

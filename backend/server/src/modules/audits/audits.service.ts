@@ -32,6 +32,10 @@ export const auditsService = {
     return { ...cycle, items };
   },
 
+  async stats() {
+    return auditsRepository.stats();
+  },
+
   async create(
     data: { name: string; locationId?: number | null; startsOn: string; endsOn: string },
     actorId: number,

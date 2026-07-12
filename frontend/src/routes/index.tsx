@@ -10,6 +10,8 @@ import { Dashboard } from '../features/dashboard/Dashboard';
 import { OrganizationPage } from '../features/organization/OrganizationPage';
 import { TransfersPage } from '../features/transfers/TransfersPage';
 import { BookingsPage } from '../features/bookings/BookingsPage';
+import { MaintenancePage } from '../features/maintenance/MaintenancePage';
+import { AuditPage } from '../features/audits/AuditPage';
 
 export const router = createBrowserRouter([
   {
@@ -50,6 +52,18 @@ export const router = createBrowserRouter([
           {
             path: 'bookings',
             element: <BookingsPage />,
+          },
+          {
+            path: 'maintenance',
+            element: <MaintenancePage />,
+          },
+          {
+            path: 'audits',
+            element: <AuditPage />,
+          },
+          {
+            path: 'audit',
+            element: <Navigate to="/audits" replace />,
           },
           {
             path: 'departments/:id',

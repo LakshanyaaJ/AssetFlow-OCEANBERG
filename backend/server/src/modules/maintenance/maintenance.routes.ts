@@ -43,6 +43,10 @@ maintenanceRouter.get('/', authorize('maintenance.read'), asyncHandler(async (re
   ok(res, rows, meta);
 }));
 
+maintenanceRouter.get('/stats', authorize('maintenance.read'), asyncHandler(async (req, res) => {
+  ok(res, await maintenanceService.stats());
+}));
+
 maintenanceRouter.get('/:id', authorize('maintenance.read'), validate({ params: idParamSchema }), asyncHandler(async (req, res) => {
   ok(res, await maintenanceService.get(Number(req.params.id)));
 }));

@@ -31,6 +31,10 @@ auditsRouter.get('/', authorize('audit.read'), asyncHandler(async (req, res) => 
   ok(res, rows, meta);
 }));
 
+auditsRouter.get('/stats', authorize('audit.read'), asyncHandler(async (req, res) => {
+  ok(res, await auditsService.stats());
+}));
+
 auditsRouter.get('/:id', authorize('audit.read'), validate({ params: idParamSchema }), asyncHandler(async (req, res) => {
   ok(res, await auditsService.get(Number(req.params.id)));
 }));
