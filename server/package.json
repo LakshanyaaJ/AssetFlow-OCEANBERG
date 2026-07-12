@@ -2,11 +2,11 @@
   "name": "assetflow-server",
   "version": "1.0.0",
   "description": "AssetFlow ERP — REST API (Express + TypeScript + PostgreSQL)",
-  "main": "dist/index.js",
+  "main": "dist/src/index.js",
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "build": "tsc -p tsconfig.json",
-    "start": "node dist/index.js",
+    "start": "node dist/src/index.js",
     "typecheck": "tsc --noEmit",
     "db:setup": "tsx scripts/db-setup.ts",
     "db:reset": "tsx scripts/db-setup.ts --reset"
