@@ -1,0 +1,36 @@
+import { Router } from 'express';
+import { activityRouter } from './modules/activity/activity.routes';
+import { allocationsRouter } from './modules/allocations/allocations.routes';
+import { assetsRouter } from './modules/assets/assets.routes';
+import { categoriesRouter } from './modules/assets/categories.routes';
+import { auditsRouter } from './modules/audits/audits.routes';
+import { authRouter } from './modules/auth/auth.routes';
+import { bookingsRouter } from './modules/bookings/bookings.routes';
+import { maintenanceRouter } from './modules/maintenance/maintenance.routes';
+import { notificationsRouter } from './modules/notifications/notifications.routes';
+import { departmentsRouter } from './modules/org/departments.routes';
+import { employeesRouter } from './modules/org/employees.routes';
+import { locationsRouter } from './modules/org/locations.routes';
+import { reportsRouter } from './modules/reports/reports.routes';
+import { resourcesRouter } from './modules/resources/resources.routes';
+import { transfersRouter } from './modules/transfers/transfers.routes';
+import { usersRouter } from './modules/users/users.routes';
+
+export const apiRouter = Router();
+
+apiRouter.use('/auth', authRouter);
+apiRouter.use('/users', usersRouter);
+apiRouter.use('/departments', departmentsRouter);
+apiRouter.use('/locations', locationsRouter);
+apiRouter.use('/employees', employeesRouter);
+apiRouter.use('/asset-categories', categoriesRouter);
+apiRouter.use('/assets', assetsRouter);
+apiRouter.use('/allocations', allocationsRouter);
+apiRouter.use('/transfers', transfersRouter);
+apiRouter.use('/resources', resourcesRouter);
+apiRouter.use('/bookings', bookingsRouter);
+apiRouter.use('/maintenance', maintenanceRouter);
+apiRouter.use('/audits', auditsRouter);
+apiRouter.use('/notifications', notificationsRouter);
+apiRouter.use('/activity-logs', activityRouter);
+apiRouter.use('/reports', reportsRouter);
